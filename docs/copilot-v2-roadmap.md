@@ -162,18 +162,34 @@ Remaining integration work:
 
 ### Phase 6 — Copilot workspace
 
-Status: next.
+Status: implemented foundation.
 
-The primary UI should show:
+`copilot_workspace` now provides one client-neutral presentation contract with:
 
-1. user objective;
-2. proposed analysis plan;
-3. data readiness and blocked steps;
-4. tool execution trace;
-5. integrated risk findings;
-6. scenario comparison;
-7. consultation brief;
-8. citations and audit export.
+1. user objective and dependency-aware analysis plan;
+2. data readiness and blocked-step disclosure;
+3. structured scenario candidates and readiness state;
+4. integrated risk chains;
+5. consultation brief and questions;
+6. calculation and document citation IDs;
+7. a contiguous execution trace;
+8. a stable workspace ID bound to objective and case snapshot;
+9. a compact audit export with mandatory human-review status;
+10. snapshot-consistency validation across scenarios and reasoning.
+
+The workspace does not execute deterministic calculations or approve scenarios.
+It composes existing governed outputs so Streamlit and future API clients can
+render the same auditable state.
+
+Remaining product integration work:
+
+- add a Streamlit Copilot workspace renderer and make it the primary navigation view;
+- construct `UnifiedCopilotCase` from current session, official-data, and calculation state;
+- route approved scenario requests through deterministic executors;
+- attach calculation results and findings back to the case;
+- render before/after scenario comparisons and risk-chain citations;
+- export the complete workspace audit JSON from the UI;
+- run the full test suite and resolve any integration regressions.
 
 Standalone dashboards remain supporting views, not the primary product narrative.
 
