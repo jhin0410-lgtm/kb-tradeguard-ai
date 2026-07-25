@@ -48,10 +48,6 @@ st.caption(
 
 
 @st.cache_data
-ndef_load_marker = None
-
-
-@st.cache_data
 def _load_transactions() -> pd.DataFrame:
     return pd.read_csv(SAMPLE_TRANSACTIONS)
 
