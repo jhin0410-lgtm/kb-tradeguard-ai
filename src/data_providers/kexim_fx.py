@@ -17,6 +17,12 @@ from .base import (
 
 BASE_URL = "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON"
 SOURCE_URL = "https://www.data.go.kr/data/3068846/openapi.do"
+RESULT_MESSAGES = {
+    "1": "success",
+    "2": "data code error",
+    "3": "authentication key error",
+    "4": "daily request limit exceeded",
+}
 
 
 def _parse_number(value: Any) -> float | None:
@@ -97,6 +103,10 @@ class KEXIMFXProvider:
         for row in response:
             if not isinstance(row, dict):
                 raise ProviderResponseError("KEXIM rate row must be a JSON object")
+            result_code = str(row.get("result") or "")
+            if result_code and result_code != "1":
+                message = RESULT_MESSAGES.get(result_code, "unknown provider error")
+                raise ProviderResponseError(f"KEXIM {result_code}: {message}")
             rows.append(
                 {
                     "result_code": row.get("result"),
