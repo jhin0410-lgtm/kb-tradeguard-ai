@@ -128,6 +128,15 @@ def test_kexim_rejects_invalid_date():
         provider.fetch_rates("2026/07/24")
 
 
+def test_kexim_list_wrapped_provider_error_is_rejected():
+    provider = KEXIMFXProvider(
+        api_key="bad",
+        transport=lambda *args: _json_bytes([{"result": 3}]),
+    )
+    with pytest.raises(ProviderResponseError, match="authentication key error"):
+        provider.fetch_rates("20260724")
+
+
 def test_opendart_company_profile_is_normalized():
     captured = {}
 
