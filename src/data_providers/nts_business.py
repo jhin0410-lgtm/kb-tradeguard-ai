@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from collections.abc import Callable, Sequence
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -27,7 +28,17 @@ from .base import (
 BASE_URL = "https://api.odcloud.kr/api/nts-businessman/v1"
 SOURCE_URL = "https://www.data.go.kr/data/15081808/openapi.do"
 MAX_BATCH_SIZE = 100
+RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 Transport = Callable[[str, bytes, dict[str, str], float], bytes]
+Sleeper = Callable[[float], None]
+
+
+class _TransportRequestError(ProviderRequestError):
+    """Transport error carrying whether an automatic retry is appropriate."""
+
+    def __init__(self, message: str, *, retryable: bool) -> None:
+        super().__init__(message)
+        self.retryable = bool(retryable)
 
 
 def normalize_business_number(value: str) -> str:
@@ -51,11 +62,15 @@ def _default_transport(
             return response.read()
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise ProviderRequestError(
-            f"NTS request failed with HTTP {exc.code}: {detail[:300]}"
+        raise _TransportRequestError(
+            f"NTS request failed with HTTP {exc.code}: {detail[:300]}",
+            retryable=exc.code in RETRYABLE_HTTP_CODES,
         ) from exc
     except URLError as exc:
-        raise ProviderRequestError(f"NTS request failed: {exc.reason}") from exc
+        raise _TransportRequestError(
+            f"NTS request failed: {exc.reason}",
+            retryable=True,
+        ) from exc
 
 
 class NTSBusinessStatusProvider:
@@ -68,7 +83,10 @@ class NTSBusinessStatusProvider:
         api_key: str | None = None,
         *,
         timeout: float = 15.0,
+        max_attempts: int = 3,
+        backoff_seconds: float = 0.75,
         transport: Transport | None = None,
+        sleep: Sleeper | None = None,
     ) -> None:
         self.api_key = (
             api_key
@@ -77,7 +95,17 @@ class NTSBusinessStatusProvider:
             or ""
         ).strip()
         self.timeout = float(timeout)
+        self.max_attempts = int(max_attempts)
+        self.backoff_seconds = float(backoff_seconds)
         self.transport = transport or _default_transport
+        self.sleep = sleep or time.sleep
+
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
+        if self.max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        if self.backoff_seconds < 0:
+            raise ValueError("backoff_seconds must be non-negative")
 
     @property
     def is_configured(self) -> bool:
@@ -89,14 +117,28 @@ class NTSBusinessStatusProvider:
                 "NTS_BUSINESS_API_KEY or DATA_GO_KR_SERVICE_KEY is required"
             )
         encoded_key = quote(self.api_key, safe="%")
-        url = f"{BASE_URL}/{endpoint}?serviceKey={encoded_key}"
+        url = f"{BASE_URL}/{endpoint}?serviceKey={encoded_key}&returnType=JSON"
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        raw = self.transport(
-            url,
-            body,
-            {"Content-Type": "application/json", "Accept": "application/json"},
-            self.timeout,
-        )
+
+        raw: bytes | None = None
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                raw = self.transport(
+                    url,
+                    body,
+                    {"Content-Type": "application/json", "Accept": "application/json"},
+                    self.timeout,
+                )
+                break
+            except _TransportRequestError as exc:
+                if not exc.retryable or attempt >= self.max_attempts:
+                    raise
+                delay = self.backoff_seconds * (2 ** (attempt - 1))
+                self.sleep(delay)
+
+        if raw is None:
+            raise ProviderRequestError("NTS request did not produce a response")
+
         try:
             parsed = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
