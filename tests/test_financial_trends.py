@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from src.intelligence import analyze_financial_trends
@@ -179,7 +180,7 @@ def test_zero_base_growth_is_not_fabricated():
         (result.changes["source"] == "account")
         & (result.changes["series"] == "revenue")
     ].iloc[0]
-    assert row["change_pct"] is None or pytest.approx(row["change_pct"]) != row["change_pct"]
+    assert pd.isna(row["change_pct"])
     assert row["change_basis"] == "zero_base_not_comparable"
 
 
