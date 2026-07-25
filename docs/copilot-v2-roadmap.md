@@ -136,14 +136,33 @@ Remaining integration work:
 
 ### Phase 5 — Integrated reasoning
 
-Generate a cited risk chain rather than a generic score, for example:
+Status: implemented foundation.
 
-`receivable delay -> maturity mismatch -> cash shortfall -> reduced financial buffer -> consultation priority`
+`copilot_reasoning` now provides:
 
-The chain must distinguish computed facts, retrieved context, and interpretive
-inference.
+- ordered risk chains generated from grounded case findings;
+- explicit separation of document facts, calculated facts, scenario assumptions,
+  contextual facts, inference, and consultation priority;
+- calculation, evidence, scenario, and upstream-node references;
+- validation that direct facts have source identifiers;
+- validation that interpretive nodes depend only on earlier grounded nodes;
+- stable chain and node IDs bound to the case snapshot;
+- unresolved information gaps and authority limitations on every report.
+
+The reasoning layer performs no financial arithmetic. It links existing facts and
+marks interpretive statements as inference rather than presenting them as newly
+computed facts.
+
+Remaining integration work:
+
+- derive richer multi-finding chains from executed scenario deltas;
+- connect financial-context observations as separately cited context nodes;
+- add chain-level answer validation and audit export;
+- render the trace in the Copilot workspace.
 
 ### Phase 6 — Copilot workspace
+
+Status: next.
 
 The primary UI should show:
 
