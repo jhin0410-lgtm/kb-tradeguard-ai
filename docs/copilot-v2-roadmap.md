@@ -53,7 +53,7 @@ as an executable KB quote.
 
 ### Phase 1 — Planning contracts
 
-Status: started.
+Status: implemented foundation.
 
 - `CaseCapabilities`
 - `AnalysisPlanStep`
@@ -67,21 +67,30 @@ calculations.
 
 ### Phase 2 — Unified case model
 
-Create one state contract containing:
+Status: implemented foundation.
+
+`UnifiedCopilotCase` now provides one state contract containing:
 
 - company identity and analysis date;
-- documents and approval state;
-- transactions and foreign-currency cash;
+- approved and unresolved document evidence;
+- approved transactions and foreign-currency cash;
+- monthly cost assumptions;
 - official FX provenance;
-- financial context;
-- generated scenarios;
-- deterministic results and citations;
-- unresolved gaps and conflicts.
+- financial and policy context;
+- proposed or executed scenarios;
+- deterministic results keyed by calculation ID;
+- grounded findings;
+- unresolved inputs;
+- stable case hashing and compact audit summary;
+- derived `CaseCapabilities` for the planner.
 
-Existing pages should consume this contract rather than independently rebuilding
-state.
+The case object is an orchestration boundary, not a replacement calculation
+engine. Existing pages still need to be migrated to consume this contract rather
+than independently rebuilding state.
 
 ### Phase 3 — Read-only tool expansion
+
+Status: next.
 
 Add governed tools for:
 
