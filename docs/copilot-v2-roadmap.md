@@ -90,17 +90,30 @@ than independently rebuilding state.
 
 ### Phase 3 — Read-only tool expansion
 
-Status: next.
+Status: implemented foundation.
 
-Add governed tools for:
+`src/copilot_intelligence.py` now provides governed, non-mutating case tools for:
 
 - document readiness and evidence coverage;
-- cross-document conflict reporting;
-- official-data readiness;
-- financial-context retrieval;
-- integrated consultation brief generation.
+- unresolved evidence and workflow blocking reasons;
+- repeated-transaction field conflict detection;
+- explicit document-warning conflict reporting;
+- capability-derived information gaps;
+- deterministic consultation-question generation;
+- integrated pre-consultation brief generation;
+- preservation of the official-credit, approval, suitability, and executable-quote boundaries.
 
-Every financial number must continue to originate from a deterministic result.
+The readiness percentage is a workflow-control indicator, not a statistical
+confidence score. Conflict detection reports observed source differences but does
+not decide which value is correct. Every financial number must continue to
+originate from a deterministic result.
+
+Remaining Phase 3 integration work:
+
+- expose these functions through the governed read-only tool facade;
+- add official-data readiness details and financial-context adapters;
+- connect planner execution traces and audit export;
+- render the outputs in the Copilot workspace.
 
 ### Phase 4 — Scenario intelligence
 
