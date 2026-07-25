@@ -92,36 +92,47 @@ than independently rebuilding state.
 
 Status: implemented foundation.
 
-`src/copilot_intelligence.py` now provides governed, non-mutating case tools for:
+Implemented governed case-intelligence tools for:
 
 - document readiness and evidence coverage;
-- unresolved evidence and workflow blocking reasons;
-- repeated-transaction field conflict detection;
-- explicit document-warning conflict reporting;
-- capability-derived information gaps;
-- deterministic consultation-question generation;
-- integrated pre-consultation brief generation;
-- preservation of the official-credit, approval, suitability, and executable-quote boundaries.
+- cross-document conflict reporting;
+- information-gap derivation;
+- consultation-question generation;
+- integrated consultation brief generation.
 
-The readiness percentage is a workflow-control indicator, not a statistical
-confidence score. Conflict detection reports observed source differences but does
-not decide which value is correct. Every financial number must continue to
-originate from a deterministic result.
+Remaining integration work:
 
-Remaining Phase 3 integration work:
+- expose the tools through the existing `ReadOnlyAdvisorTools` facade;
+- add official-data and financial-context adapters;
+- connect planner execution trace, UI, and audit export.
 
-- expose these functions through the governed read-only tool facade;
-- add official-data readiness details and financial-context adapters;
-- connect planner execution traces and audit export;
-- render the outputs in the Copilot workspace.
+Every financial number must continue to originate from a deterministic result.
 
 ### Phase 4 — Scenario intelligence
 
-The AI may propose structured scenario candidates from the reviewed case, for
-example settlement delay, FX shock, import-cost increase, or combinations.
-The deterministic scenario engine validates and executes the structured inputs.
-The output must disclose why the scenario was selected and which assumptions
-changed.
+Status: implemented foundation.
+
+`copilot_scenarios` now provides:
+
+- structured settlement-delay, FX-shock, import-cost, and combined-stress candidates;
+- capability-aware `ready` or `blocked` status;
+- disclosed parameter sources and limitations;
+- stable scenario IDs bound to the case snapshot;
+- explicit human approval before execution request creation;
+- stale-case rejection;
+- immutable attachment of proposed scenarios to `UnifiedCopilotCase`.
+
+Scenario proposal does not calculate outcomes or assign occurrence probabilities.
+The existing deterministic scenario engines must validate and execute each
+approved request, then attach calculation IDs before a scenario can be marked
+`executed`.
+
+Remaining integration work:
+
+- implement or adapt deterministic import-cost and combined-stress executors;
+- route approved requests through the governed tool facade;
+- persist execution traces and calculation citations in the case audit export;
+- expose scenario approval and comparison in the Copilot workspace.
 
 ### Phase 5 — Integrated reasoning
 
