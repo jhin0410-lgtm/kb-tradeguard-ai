@@ -7,7 +7,10 @@ from src.data_providers import (
     ProviderConfigurationError,
     ProviderResponseError,
 )
-from src.data_providers.nts_business import normalize_business_number
+from src.data_providers.nts_business import (
+    _TransportRequestError,
+    normalize_business_number,
+)
 
 
 def test_normalize_business_number_removes_separators():
@@ -28,6 +31,32 @@ def test_missing_api_key_fails_before_network_call(monkeypatch):
         provider.check_status(["1234567890"])
 
 
+def _status_response() -> bytes:
+    return json.dumps(
+        {
+            "status_code": "OK",
+            "match_cnt": 1,
+            "request_cnt": 1,
+            "data": [
+                {
+                    "b_no": "1234567890",
+                    "b_stt": "계속사업자",
+                    "b_stt_cd": "01",
+                    "tax_type": "부가가치세 일반과세자",
+                    "tax_type_cd": "01",
+                    "end_dt": "",
+                    "utcc_yn": "N",
+                    "tax_type_change_dt": "",
+                    "invoice_apply_dt": "",
+                    "rbf_tax_type": "해당없음",
+                    "rbf_tax_type_cd": "99",
+                }
+            ],
+        },
+        ensure_ascii=False,
+    ).encode("utf-8")
+
+
 def test_status_request_is_normalized_and_provenance_is_returned():
     captured = {}
 
@@ -40,29 +69,7 @@ def test_status_request_is_normalized_and_provenance_is_returned():
                 "timeout": timeout,
             }
         )
-        return json.dumps(
-            {
-                "status_code": "OK",
-                "match_cnt": 1,
-                "request_cnt": 1,
-                "data": [
-                    {
-                        "b_no": "1234567890",
-                        "b_stt": "계속사업자",
-                        "b_stt_cd": "01",
-                        "tax_type": "부가가치세 일반과세자",
-                        "tax_type_cd": "01",
-                        "end_dt": "",
-                        "utcc_yn": "N",
-                        "tax_type_change_dt": "",
-                        "invoice_apply_dt": "",
-                        "rbf_tax_type": "해당없음",
-                        "rbf_tax_type_cd": "99",
-                    }
-                ],
-            },
-            ensure_ascii=False,
-        ).encode("utf-8")
+        return _status_response()
 
     provider = NTSBusinessStatusProvider(
         api_key="test%2Fencoded-key",
@@ -71,7 +78,9 @@ def test_status_request_is_normalized_and_provenance_is_returned():
     )
     result = provider.check_status(["123-45-67890"])
 
-    assert captured["url"].endswith("/status?serviceKey=test%2Fencoded-key")
+    assert captured["url"].endswith(
+        "/status?serviceKey=test%2Fencoded-key&returnType=JSON"
+    )
     assert captured["body"] == {"b_no": ["1234567890"]}
     assert captured["headers"]["Content-Type"] == "application/json"
     assert captured["timeout"] == 3.0
@@ -80,6 +89,57 @@ def test_status_request_is_normalized_and_provenance_is_returned():
     assert result["results"][0]["closure_date"] is None
     assert len(result["response_hash"]) == 64
     assert "not a credit assessment" in result["limitations"]
+
+
+def test_transient_transport_errors_retry_with_exponential_backoff():
+    attempts = 0
+    sleeps = []
+
+    def transport(url, body, headers, timeout):
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise _TransportRequestError(
+                "NTS request failed with HTTP 503: temporary outage",
+                retryable=True,
+            )
+        return _status_response()
+
+    provider = NTSBusinessStatusProvider(
+        api_key="test",
+        max_attempts=3,
+        backoff_seconds=0.25,
+        transport=transport,
+        sleep=sleeps.append,
+    )
+    result = provider.check_status(["1234567890"])
+
+    assert attempts == 3
+    assert sleeps == [0.25, 0.5]
+    assert result["results"][0]["business_status_code"] == "01"
+
+
+def test_non_retryable_transport_error_is_not_retried():
+    attempts = 0
+
+    def transport(url, body, headers, timeout):
+        nonlocal attempts
+        attempts += 1
+        raise _TransportRequestError(
+            "NTS request failed with HTTP 401: invalid key",
+            retryable=False,
+        )
+
+    provider = NTSBusinessStatusProvider(
+        api_key="test",
+        max_attempts=3,
+        transport=transport,
+        sleep=lambda _: None,
+    )
+
+    with pytest.raises(_TransportRequestError, match="HTTP 401"):
+        provider.check_status(["1234567890"])
+    assert attempts == 1
 
 
 def test_status_batch_limit_is_enforced():
