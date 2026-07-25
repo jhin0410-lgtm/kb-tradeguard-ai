@@ -1,0 +1,2 @@
+data/policy_docs/*.txt text eol=lf
+data/policy_docs/manifest.json text eol=lf
