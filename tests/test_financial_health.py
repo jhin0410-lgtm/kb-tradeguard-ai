@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from src.intelligence import analyze_financial_health
@@ -109,7 +110,7 @@ def test_missing_accounts_are_not_fabricated_and_reduce_coverage():
     assert result.data_coverage_ratio == 0.0
     assert result.screening_band == "insufficient_data"
     extracted = result.extracted_accounts.set_index("account_key")
-    assert extracted.loc["revenue", "value"] is None
+    assert pd.isna(extracted.loc["revenue", "value"])
 
 
 def test_zero_denominator_returns_missing_metric_instead_of_infinity():
