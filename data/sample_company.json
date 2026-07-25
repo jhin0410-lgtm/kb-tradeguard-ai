@@ -1,0 +1,15 @@
+{
+  "company_name": "한빛테크 주식회사",
+  "business_type": "전자부품 제조 및 수출입",
+  "customer_segment": "Korean SME exporter/importer",
+  "base_currency": "KRW",
+  "supported_foreign_currencies": ["USD", "EUR"],
+  "foreign_cash": {
+    "USD": 40000,
+    "EUR": 10000
+  },
+  "current_cash_krw": 100000000,
+  "monthly_fixed_cost_krw": 80000000,
+  "as_of_date": "2026-08-31",
+  "data_timestamp": "Bundled sample assumptions — not real-time"
+}

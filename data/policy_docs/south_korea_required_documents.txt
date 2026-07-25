@@ -1,0 +1,8 @@
+[section: shipping-documents]
+The official country guide describes common shipping and import-document categories including a commercial invoice, certificate of origin where applicable, packing list, and bill of lading. Exact requirements depend on the goods, origin, destination, applicable rules, and the reviewing authority.
+
+[section: consultation-checklist]
+A consultation checklist can include the transaction contract or purchase order, invoice, currency and amount, expected settlement date, payment terms, Incoterm, counterparty, packing list, transport document, and certificate of origin where applicable.
+
+[section: reference-boundary]
+This summary is not legal advice and does not determine whether a document set is complete. Users must confirm current requirements with the relevant bank, customs professional, insurer, guarantor, or authority.

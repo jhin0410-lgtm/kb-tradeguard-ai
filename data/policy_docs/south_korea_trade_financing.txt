@@ -1,0 +1,8 @@
+[section: payment-methods]
+The official country guide identifies common international payment methods such as sight and deferred letters of credit, documents against acceptance, documents against payment, and open-account transactions. Settlement timing and documentary conditions differ by method.
+
+[section: consultation-context]
+For a bank consultation, users can prepare the commercial contract or order, invoice, settlement schedule, payment terms, currency and amount, shipping documents when available, counterparty information, and the purpose of financing or FX risk review. The bank must confirm its own required documents and current terms.
+
+[section: reference-boundary]
+The guide provides general market information. It does not confirm that any named policy, institution, or product is currently available to a particular customer, and it does not determine approval or suitability.

@@ -1,0 +1,8 @@
+[section: terminology]
+The official Trade Finance Guide describes trade finance as techniques and instruments used to manage payment and delivery risks in international trade. It discusses commercial and country risk, open-account terms, letters of credit, documentary collection, export working capital, export credit insurance, factoring, and related terminology.
+
+[section: working-capital]
+The guide explains that exporters offering deferred or open-account terms may need working-capital support across the cash cycle. The appropriate structure depends on transaction documents, payment terms, counterparty and country risk, lender requirements, and current program terms.
+
+[section: reference-boundary]
+This local summary is general information only. It does not establish Korean customer eligibility, current Korean product availability, financing approval, limits, pricing, or suitability. The source edition is older and has no stated effective date; users should verify current official guidance.

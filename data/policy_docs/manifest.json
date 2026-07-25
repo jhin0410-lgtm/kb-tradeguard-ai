@@ -1,0 +1,98 @@
+{
+  "corpus_name": "KB TradeGuard reviewed public-guidance summaries",
+  "retrieval_policy": "Only project-authored summaries with status approved_reference are searchable.",
+  "documents": [
+    {
+      "document_id": "KSURE-OVERVIEW-001",
+      "title": "무역보험제도 개관 — project-authored summary",
+      "content_origin": "project_authored_summary",
+      "official_source_url": "https://www.ksure.or.kr/rh-kr/cntnts/i-13/dir.do",
+      "official_issuer": "한국무역보험공사",
+      "official_publication_date": null,
+      "official_effective_date": null,
+      "source_retrieval_date": "2026-07-25",
+      "summary_last_reviewed": "2026-07-25",
+      "effective_date_verified": false,
+      "local_file_checksum": "395ef719cfcd4a04ce18fbb2f748f45e8308e1340222353cc0b10deda463fc85",
+      "document_type": "project_authored_summary",
+      "applicable_currency": "general",
+      "applicable_customer_type": "exporters and importers",
+      "categories": [
+        "foreign-exchange risk management guidance",
+        "trade credit insurance guidance",
+        "export guarantees",
+        "export receivables financing guidance"
+      ],
+      "text_file": "ksure_overview.txt",
+      "status": "approved_reference"
+    },
+    {
+      "document_id": "ITA-TRADE-FINANCE-001",
+      "title": "Trade Finance Guide — project-authored summary",
+      "content_origin": "project_authored_summary",
+      "official_source_url": "https://www.trade.gov/report/trade-finance-guide",
+      "official_issuer": "U.S. International Trade Administration",
+      "official_publication_date": "2022-07-01",
+      "official_effective_date": null,
+      "source_retrieval_date": "2026-07-25",
+      "summary_last_reviewed": "2026-07-25",
+      "effective_date_verified": false,
+      "local_file_checksum": "53f40c1fa82666d86801f1b4b094f21dbbf43ece494634a64f4110c30c91b8c6",
+      "document_type": "project_authored_summary",
+      "applicable_currency": "general",
+      "applicable_customer_type": "exporters",
+      "categories": [
+        "working-capital finance",
+        "export receivables financing guidance",
+        "trade credit insurance guidance",
+        "general trade-finance terminology"
+      ],
+      "text_file": "trade_finance_guide.txt",
+      "status": "approved_reference"
+    },
+    {
+      "document_id": "ITA-KOREA-FINANCE-001",
+      "title": "South Korea - Trade Financing — project-authored summary",
+      "content_origin": "project_authored_summary",
+      "official_source_url": "https://www.trade.gov/country-commercial-guides/south-korea-trade-financing",
+      "official_issuer": "U.S. International Trade Administration",
+      "official_publication_date": "2026-06-29",
+      "official_effective_date": null,
+      "source_retrieval_date": "2026-07-25",
+      "summary_last_reviewed": "2026-07-25",
+      "effective_date_verified": false,
+      "local_file_checksum": "de1b0fb1e860599df055fdece3a765db9dafd1c2354c9d2774b3347e98b5a999",
+      "document_type": "project_authored_summary",
+      "applicable_currency": "general",
+      "applicable_customer_type": "exporters and importers",
+      "categories": [
+        "import financing",
+        "working-capital finance",
+        "general trade-finance terminology"
+      ],
+      "text_file": "south_korea_trade_financing.txt",
+      "status": "approved_reference"
+    },
+    {
+      "document_id": "ITA-KOREA-DOCS-001",
+      "title": "South Korea - Import Requirements and Documentation — project-authored summary",
+      "content_origin": "project_authored_summary",
+      "official_source_url": "https://www.trade.gov/country-commercial-guides/south-korea-import-requirements-and-documentation",
+      "official_issuer": "U.S. International Trade Administration",
+      "official_publication_date": "2026-06-29",
+      "official_effective_date": null,
+      "source_retrieval_date": "2026-07-25",
+      "summary_last_reviewed": "2026-07-25",
+      "effective_date_verified": false,
+      "local_file_checksum": "12cb97c4572fc7ef858d45ce0a48fe93d3e9f85fe444f0515337d618d5f5b735",
+      "document_type": "project_authored_summary",
+      "applicable_currency": "general",
+      "applicable_customer_type": "importers and exporters",
+      "categories": [
+        "required consultation documents"
+      ],
+      "text_file": "south_korea_required_documents.txt",
+      "status": "approved_reference"
+    }
+  ]
+}
