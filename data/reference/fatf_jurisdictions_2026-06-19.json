@@ -1,0 +1,41 @@
+{
+  "registry_name": "FATF high-risk and increased-monitoring jurisdictions",
+  "publication_date": "2026-06-19",
+  "retrieval_date": "2026-07-26",
+  "official_source_url": "https://www.fatf-gafi.org/en/countries/black-and-grey-lists.html",
+  "source_status": "reviewed_official_snapshot",
+  "limitations": [
+    "This snapshot is a public-list screening input, not a customer risk rating or transaction prohibition.",
+    "Absence from these two FATF public statements does not establish low AML/CFT risk.",
+    "Current status must be rechecked when the snapshot is stale or before a material transaction decision."
+  ],
+  "high_risk_call_for_action": [
+    {"country_code": "KP", "country_name": "Democratic People's Republic of Korea"},
+    {"country_code": "IR", "country_name": "Iran"},
+    {"country_code": "MM", "country_name": "Myanmar"}
+  ],
+  "increased_monitoring": [
+    {"country_code": "AO", "country_name": "Angola"},
+    {"country_code": "BO", "country_name": "Bolivia"},
+    {"country_code": "BA", "country_name": "Bosnia and Herzegovina"},
+    {"country_code": "BG", "country_name": "Bulgaria"},
+    {"country_code": "CM", "country_name": "Cameroon"},
+    {"country_code": "CI", "country_name": "Côte d'Ivoire"},
+    {"country_code": "CD", "country_name": "Democratic Republic of Congo"},
+    {"country_code": "HT", "country_name": "Haiti"},
+    {"country_code": "IQ", "country_name": "Iraq"},
+    {"country_code": "KE", "country_name": "Kenya"},
+    {"country_code": "KW", "country_name": "Kuwait"},
+    {"country_code": "LA", "country_name": "Lao People's Democratic Republic"},
+    {"country_code": "LB", "country_name": "Lebanon"},
+    {"country_code": "MC", "country_name": "Monaco"},
+    {"country_code": "NP", "country_name": "Nepal"},
+    {"country_code": "PG", "country_name": "Papua New Guinea"},
+    {"country_code": "SS", "country_name": "South Sudan"},
+    {"country_code": "SY", "country_name": "Syria"},
+    {"country_code": "VE", "country_name": "Venezuela"},
+    {"country_code": "VN", "country_name": "Vietnam"},
+    {"country_code": "VG", "country_name": "Virgin Islands (UK)"},
+    {"country_code": "YE", "country_name": "Yemen"}
+  ]
+}
