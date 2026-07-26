@@ -1,0 +1,63 @@
+{
+  "registry_name": "KB TradeGuard transaction-to-financial-capacity screening rules",
+  "registry_version": "transaction-capacity-rules/1.0",
+  "effective_date": "2026-07-26",
+  "authority_boundary": "Project-authored structural capacity checks. Thresholds are review triggers, not bank credit standards, ratings, approval criteria, default probabilities, expected-loss estimates, or product suitability decisions.",
+  "rules": [
+    {
+      "rule_id": "FUNDING-NEED-EXCEEDS-LIQUID-ASSETS",
+      "metric_name": "funding_need_to_liquid_assets_pct",
+      "operator": "greater_than",
+      "threshold": 100,
+      "severity": "high",
+      "category": "liquidity",
+      "title": "거래 준비자금이 확인된 유동성 자원을 초과함",
+      "failure_path": "명시된 선적 전 또는 거래 준비자금이 확인된 현금 및 단기금융자산보다 크면 외부 조달, 지급일정 조정, 선급금 또는 거래구조 변경이 없을 때 자금 공백이 발생할 수 있습니다.",
+      "unresolved_fact": "실제 집행시점, 사용 가능한 한도, 담보·보증, 기존 운전자금 약정과 다른 현금유출을 함께 확인해야 합니다."
+    },
+    {
+      "rule_id": "UNPROTECTED-EXPOSURE-EXCEEDS-CASH",
+      "metric_name": "unprotected_exposure_to_cash_pct",
+      "operator": "greater_than",
+      "threshold": 100,
+      "severity": "high",
+      "category": "company_capacity",
+      "title": "명시적 보호 후 잔여노출이 현금성자산을 초과함",
+      "failure_path": "사용자가 명시한 보험·보증·선급금 보호비율을 반영한 잔여 거래노출이 현금성자산보다 크면 미지급 또는 회수지연 발생 시 자체 현금만으로 흡수하기 어렵습니다.",
+      "unresolved_fact": "실제 보장범위, 면책, 부보율, 회수가능성, 기타 가용자금과 손실발생 시점을 확인해야 합니다."
+    },
+    {
+      "rule_id": "UNPROTECTED-EXPOSURE-EXCEEDS-EQUITY",
+      "metric_name": "unprotected_exposure_to_equity_pct",
+      "operator": "greater_than",
+      "threshold": 100,
+      "severity": "high",
+      "category": "company_capacity",
+      "title": "명시적 보호 후 잔여노출이 자기자본을 초과함",
+      "failure_path": "잔여노출 전액이 손실이라는 가정이 아니라도, 그 금액이 자기자본보다 크다는 사실은 거래집중과 손실흡수력 검토가 필요함을 의미합니다.",
+      "unresolved_fact": "예상손실로 해석하지 말고 거래별 회수가능성, 보험·보증 실효성, 자본변동과 다른 대형노출을 확인해야 합니다."
+    },
+    {
+      "rule_id": "GROSS-TRANSACTION-EXCEEDS-CURRENT-ASSETS",
+      "metric_name": "gross_transaction_to_current_assets_pct",
+      "operator": "greater_than",
+      "threshold": 100,
+      "severity": "high",
+      "category": "company_capacity",
+      "title": "단일 거래금액이 최근 유동자산을 초과함",
+      "failure_path": "단일 거래의 원화환산 총액이 최근 공시 유동자산보다 크면 계약이행, 운전자금, 회수지연과 지급의무가 기업 재무규모에 비해 매우 클 수 있습니다.",
+      "unresolved_fact": "거래가 장기간·분할 선적되는지, 선급금·매입채무·프로젝트금융·백투백 구조가 있는지 확인해야 합니다."
+    },
+    {
+      "rule_id": "GROSS-TRANSACTION-EXCEEDS-ANNUAL-REVENUE",
+      "metric_name": "gross_transaction_to_revenue_pct",
+      "operator": "greater_than",
+      "threshold": 100,
+      "severity": "high",
+      "category": "concentration",
+      "title": "단일 거래금액이 최근 연간 매출액을 초과함",
+      "failure_path": "단일 거래 총액이 최근 연간 매출액보다 크면 특정 거래와 바이어에 대한 사업집중, 생산능력, 납품실행과 대금회수 영향을 별도로 검토해야 합니다.",
+      "unresolved_fact": "공시기간이 연간인지, 거래가 다년·분할 이행인지, 기존 바이어 매출과 중복되는지 확인해야 합니다."
+    }
+  ]
+}
