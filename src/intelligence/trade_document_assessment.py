@@ -15,6 +15,8 @@ from .trade_document_rules import (
     load_trade_document_rule_registry,
 )
 
+_TRADE_DOCUMENT_RULE_SOURCE_PREFIX = "TRADE-DOCUMENT-RULES-"
+
 
 class TradeDocumentScreeningOutcome(BaseModel):
     case_before_hash: str
@@ -22,6 +24,12 @@ class TradeDocumentScreeningOutcome(BaseModel):
     evaluated_document_ids: list[str] = Field(default_factory=list)
     clause_finding_ids: list[str] = Field(default_factory=list)
     risk_signal_ids: list[str] = Field(default_factory=list)
+
+
+def _is_trade_document_rule_source(source_id: str) -> bool:
+    """Recognize all governed versions so registry upgrades replace stale results."""
+
+    return source_id.startswith(_TRADE_DOCUMENT_RULE_SOURCE_PREFIX)
 
 
 def apply_trade_document_screening(
@@ -36,8 +44,7 @@ def apply_trade_document_screening(
         if registry_path is not None
         else default_trade_document_rule_registry_path()
     )
-    registry = load_trade_document_rule_registry(resolved_path)
-    registry_source_id = f"TRADE-DOCUMENT-RULES-{registry.registry_version}"
+    load_trade_document_rule_registry(resolved_path)
     approved_evidence_ids = {
         item.evidence_id for item in case.evidence if item.status == "approved"
     }
@@ -82,7 +89,7 @@ def apply_trade_document_screening(
         item
         for item in case.trade_finance.clause_findings
         if not (
-            item.source.source_id == registry_source_id
+            _is_trade_document_rule_source(item.source.source_id)
             and item.document_id in evaluated
         )
     ]
@@ -90,7 +97,7 @@ def apply_trade_document_screening(
         item
         for item in case.trade_finance.risk_signals
         if not (
-            item.source.source_id == registry_source_id
+            _is_trade_document_rule_source(item.source.source_id)
             and bool(set(item.affected_document_ids) & evaluated)
         )
     ]
