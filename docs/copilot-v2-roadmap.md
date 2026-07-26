@@ -162,9 +162,9 @@ Remaining integration work:
 
 ### Phase 6 — Copilot workspace
 
-Status: implemented foundation.
+Status: implemented foundation; application adapter implemented.
 
-`copilot_workspace` now provides one client-neutral presentation contract with:
+`copilot_workspace` provides one client-neutral presentation contract with:
 
 1. user objective and dependency-aware analysis plan;
 2. data readiness and blocked-step disclosure;
@@ -177,19 +177,29 @@ Status: implemented foundation.
 9. a compact audit export with mandatory human-review status;
 10. snapshot-consistency validation across scenarios and reasoning.
 
-The workspace does not execute deterministic calculations or approve scenarios.
-It composes existing governed outputs so Streamlit and future API clients can
-render the same auditable state.
+`copilot_integration` now provides the first real product-integration boundary:
+
+- converts current company, portfolio, FX, cash-allocation, and audit session data
+  into `UnifiedCopilotCase`;
+- groups approved portfolio records into stable source-evidence objects;
+- normalizes foreign-currency cash and disclosed monthly cost assumptions;
+- records FX input as a public or disclosed reference, never an executable KB quote;
+- records company information as `재무건전성 사전 스크리닝` context;
+- discloses missing approved transactions and monthly cost inputs;
+- builds `CopilotWorkspace` directly from current application state;
+- exposes a compact renderer-neutral payload for Streamlit.
+
+The adapter performs no financial arithmetic and does not approve transactions or
+scenarios.
 
 Remaining product integration work:
 
-- add a Streamlit Copilot workspace renderer and make it the primary navigation view;
-- construct `UnifiedCopilotCase` from current session, official-data, and calculation state;
+- add the Streamlit renderer and make the Copilot workspace the primary navigation view;
+- attach existing deterministic calculation outputs and `CaseFinding` objects to the adapted case;
 - route approved scenario requests through deterministic executors;
-- attach calculation results and findings back to the case;
 - render before/after scenario comparisons and risk-chain citations;
 - export the complete workspace audit JSON from the UI;
-- run the full test suite and resolve any integration regressions.
+- run the full test suite and resolve integration regressions.
 
 Standalone dashboards remain supporting views, not the primary product narrative.
 
