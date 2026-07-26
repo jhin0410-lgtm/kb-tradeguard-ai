@@ -1,10 +1,10 @@
 """JSON package boundary for the governed single-transaction assessment pipeline.
 
 The package format makes the vertical slice usable without constructing Pydantic objects
-inside application code.  It validates one reviewed case and one pipeline request,
-runs the deterministic orchestration, and exports auditable JSON artifacts with hashes.
-It does not fetch missing data, approve a transaction, or convert unreviewed documents
-into approved evidence.
+inside application code. It validates one reviewed case and one pipeline request,
+runs the deterministic orchestration, and exports auditable JSON and Markdown artifacts
+with hashes. It does not fetch missing data, approve a transaction, or convert unreviewed
+documents into approved evidence.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..copilot_case import UnifiedCopilotCase
+from .decision_brief_report import render_single_transaction_assessment_markdown
 from .single_transaction_pipeline import (
     SingleTransactionAssessmentRequest,
     SingleTransactionAssessmentResult,
@@ -211,7 +212,7 @@ def export_single_transaction_package_run(
 
     output_dir = Path(output_directory)
     output_dir.mkdir(parents=True, exist_ok=True)
-    payloads: dict[str, Any] = {
+    json_payloads: dict[str, Any] = {
         "updated_case.json": run.updated_case.model_dump(mode="json"),
         "updated_case_canonical.json": run.updated_case.canonical_snapshot(),
         "assessment_result.json": run.assessment_result.model_dump(mode="json"),
@@ -221,10 +222,23 @@ def export_single_transaction_package_run(
         ],
         "audit_summary.json": run.audit_summary,
     }
+    text_payloads = {
+        "decision_brief.md": render_single_transaction_assessment_markdown(
+            run.updated_case,
+            run.assessment_result,
+        )
+    }
     artifact_paths: dict[str, str] = {}
     artifact_hashes: dict[str, str] = {}
-    for filename, payload in payloads.items():
+
+    for filename, payload in json_payloads.items():
         text = _pretty_json_text(payload)
+        path = output_dir / filename
+        _atomic_write_text(path, text)
+        artifact_paths[filename] = str(path)
+        artifact_hashes[filename] = _sha256_bytes(text.encode("utf-8"))
+
+    for filename, text in text_payloads.items():
         path = output_dir / filename
         _atomic_write_text(path, text)
         artifact_paths[filename] = str(path)
