@@ -105,8 +105,14 @@ def execute_import_cost_scenario(
         cash_flow_view=contract.cash_flow_view,
     )
     stressed_transactions = transactions.copy(deep=True)
+    # Pandas 3 rejects assigning float stress results into an int64 column.  Currency
+    # amounts may become fractional under percentage shocks, so establish the numeric
+    # analysis dtype explicitly before the targeted assignment.
+    stressed_transactions["amount_fc"] = pd.to_numeric(
+        stressed_transactions["amount_fc"], errors="raise"
+    ).astype(float)
     stressed_transactions.loc[target_mask, "amount_fc"] = (
-        stressed_transactions.loc[target_mask, "amount_fc"].astype(float)
+        stressed_transactions.loc[target_mask, "amount_fc"]
         * contract.increase_multiplier
     )
     stressed = calculate_monthly_cashflow(
