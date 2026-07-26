@@ -19,6 +19,14 @@ from .document_reconciliation import (
 from .financial_health import FinancialHealthResult, analyze_financial_health
 from .financial_snapshot import build_financial_statement_snapshot
 from .financial_trends import FinancialTrendResult, analyze_financial_trends
+from .finding_review import (
+    FindingReviewOutcome,
+    FindingReviewSummary,
+    apply_finding_review_decision,
+    finding_review_summary,
+    latest_finding_review_decisions,
+)
+from .payment_terms import NormalizedPaymentTerms, normalize_payment_terms
 from .product_matching import (
     ProductMatchingOutcome,
     ProductMatchingResult,
@@ -79,6 +87,9 @@ __all__ = [
     "DocumentReconciliationResult",
     "FinancialHealthResult",
     "FinancialTrendResult",
+    "FindingReviewOutcome",
+    "FindingReviewSummary",
+    "NormalizedPaymentTerms",
     "PipelineStageTrace",
     "ProductMatchingOutcome",
     "ProductMatchingResult",
@@ -101,6 +112,7 @@ __all__ = [
     "analyze_financial_trends",
     "analyze_transaction_capacity",
     "apply_document_reconciliation",
+    "apply_finding_review_decision",
     "apply_product_matching",
     "apply_trade_document_screening",
     "apply_transaction_capacity_assessment",
@@ -114,6 +126,8 @@ __all__ = [
     "canonical_bank_name",
     "evaluate_trade_document",
     "export_single_transaction_package_run",
+    "finding_review_summary",
+    "latest_finding_review_decisions",
     "load_fatf_registry",
     "load_product_registry",
     "load_reconciliation_registry",
@@ -123,6 +137,7 @@ __all__ = [
     "load_transaction_capacity_registry",
     "load_transaction_decision_brief_registry",
     "match_trade_finance_products",
+    "normalize_payment_terms",
     "reconcile_trade_documents",
     "render_single_transaction_assessment_markdown",
     "reviewed_terms_from_document",
