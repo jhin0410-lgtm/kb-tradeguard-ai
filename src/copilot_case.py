@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .advisor_models import CalculationResult
 from .copilot_planning import CaseCapabilities
+from .trade_finance_domain import TradeFinanceDomainState
 
 CaseDataStatus = Literal["available", "partial", "missing", "not_applicable"]
 ScenarioStatus = Literal["proposed", "approved", "executed", "rejected"]
@@ -114,11 +115,12 @@ class UnifiedCopilotCase(BaseModel):
     official_fx_reference: CaseDataAsset | None = None
     financial_context: CaseDataAsset | None = None
     policy_context: CaseDataAsset | None = None
+    trade_finance: TradeFinanceDomainState = Field(default_factory=TradeFinanceDomainState)
     calculations: dict[str, CalculationResult] = Field(default_factory=dict)
     scenarios: list[CaseScenario] = Field(default_factory=list)
     findings: list[CaseFinding] = Field(default_factory=list)
     missing_inputs: list[MissingInput] = Field(default_factory=list)
-    case_version: str = "copilot-case/1.0"
+    case_version: str = "copilot-case/1.1"
 
     @model_validator(mode="after")
     def calculation_keys_must_match_ids(self):
@@ -205,6 +207,8 @@ class UnifiedCopilotCase(BaseModel):
             "scenario_ids": [item.scenario_id for item in self.scenarios],
             "missing_inputs": [item.input_name for item in self.missing_inputs],
             "capabilities": self.capabilities.model_dump(),
+            "trade_finance_domain_version": self.trade_finance.domain_version,
+            "trade_finance_record_counts": self.trade_finance.record_counts(),
             "authority_boundary": (
                 "Financial arithmetic remains authoritative only in deterministic "
                 "engines. AI may plan, reconcile, and explain with cited evidence."
