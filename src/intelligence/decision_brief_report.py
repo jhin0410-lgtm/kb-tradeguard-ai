@@ -12,6 +12,7 @@ from typing import Any
 
 from ..copilot_case import UnifiedCopilotCase
 from ..trade_finance_domain import ActionPlanItem, ProductCandidate
+from .finding_review import latest_finding_review_decisions
 from .single_transaction_pipeline import SingleTransactionAssessmentResult
 
 _DISPOSITION_LABELS = {
@@ -43,6 +44,12 @@ _ACTION_STATUS_LABELS = {
     "completed": "완료",
     "rejected": "제외",
 }
+_REVIEW_STATUS_LABELS = {
+    "confirmed": "확인",
+    "dismissed": "기각",
+    "needs_more_information": "추가정보 필요",
+    "unreviewed": "미검토",
+}
 
 
 def _escape_cell(value: Any) -> str:
@@ -63,6 +70,10 @@ def _format_number(value: Any) -> str:
     normalized = format(number.normalize(), "f")
     integer, dot, fraction = normalized.partition(".")
     return f"{int(integer):,}{dot}{fraction}" if dot else f"{int(integer):,}"
+
+
+def _ref_ids(identifiers: list[str]) -> str:
+    return " ".join(f"[REF:{identifier}]" for identifier in identifiers) or "-"
 
 
 def _transaction(case: UnifiedCopilotCase, transaction_id: str) -> dict[str, Any]:
@@ -95,16 +106,32 @@ def _action_rows(actions: list[ActionPlanItem]) -> list[str]:
         dependencies = ", ".join(action.dependency_action_ids) or "없음"
         documents = ", ".join(action.required_documents) or "별도 명시 없음"
         rows.append(
-            "| {sequence} | {title} | {party} | {status} | {dependencies} | {documents} |".format(
+            "| {sequence} | {title} | {party} | {status} | {dependencies} | {documents} | {refs} |".format(
                 sequence=action.sequence,
                 title=_escape_cell(action.title),
                 party=_escape_cell(action.responsible_party),
                 status=_escape_cell(_ACTION_STATUS_LABELS.get(action.status, action.status)),
                 dependencies=_escape_cell(dependencies),
                 documents=_escape_cell(documents),
+                refs=_escape_cell(
+                    _ref_ids([action.action_id, *action.supporting_risk_signal_ids])
+                ),
             )
         )
     return rows
+
+
+def _transaction_findings(case: UnifiedCopilotCase, transaction_id: str):
+    document_ids = {
+        item.document_id
+        for item in case.trade_finance.trade_documents
+        if transaction_id in item.linked_transaction_ids
+    }
+    return [
+        item
+        for item in case.trade_finance.clause_findings
+        if item.document_id in document_ids
+    ]
 
 
 def render_single_transaction_assessment_markdown(
@@ -124,6 +151,8 @@ def render_single_transaction_assessment_markdown(
         for item in case.trade_finance.consultation_requirements
         if item.requirement_id in consultation_ids
     ]
+    findings = _transaction_findings(case, result.transaction_id)
+    reviews = latest_finding_review_decisions(case)
 
     lines = [
         "# KB TradeGuard 단일 거래 사전진단 보고서",
@@ -175,19 +204,52 @@ def render_single_transaction_assessment_markdown(
                     title=_escape_cell(concern.title),
                     basis=_escape_cell(concern.factual_basis),
                     unresolved=_escape_cell("; ".join(concern.unresolved_facts) or "없음"),
-                    sources=_escape_cell(", ".join(concern.source_ids)),
+                    sources=_escape_cell(_ref_ids(concern.source_ids)),
                 )
             )
     else:
         lines.append("| - | - | - | 현재 검토자료에서 표시할 우려사항 없음 | - | - | - |")
 
-    lines.extend(["", "## 4. 부족한 정보", ""])
+    lines.extend(
+        [
+            "",
+            "## 4. Finding 전문가 검토",
+            "",
+            "| Finding | 문서 | 심각도 | 검토상태 | 검토자 역할 | 검토 메모 | 보강 근거 |",
+            "|---|---|---|---|---|---|---|",
+        ]
+    )
+    if findings:
+        for finding in findings:
+            review = reviews.get(finding.clause_finding_id)
+            status = review.decision if review is not None else "unreviewed"
+            lines.append(
+                "| {finding} | {document} | {severity} | {status} | {role} | {note} | {evidence} |".format(
+                    finding=_escape_cell(_ref_ids([finding.clause_finding_id])),
+                    document=_escape_cell(finding.document_id),
+                    severity=_escape_cell(
+                        _SEVERITY_LABELS.get(finding.severity, finding.severity)
+                    ),
+                    status=_escape_cell(_REVIEW_STATUS_LABELS.get(status, status)),
+                    role=_escape_cell(review.reviewer_role if review is not None else "-"),
+                    note=_escape_cell(review.review_note if review is not None else "-"),
+                    evidence=_escape_cell(
+                        _ref_ids(review.supporting_evidence_ids)
+                        if review is not None
+                        else _ref_ids(finding.evidence_ids)
+                    ),
+                )
+            )
+    else:
+        lines.append("| - | - | - | 검토 대상 Finding 없음 | - | - | - |")
+
+    lines.extend(["", "## 5. 부족한 정보", ""])
     if brief.missing_information:
         lines.extend(f"- {item}" for item in brief.missing_information)
     else:
         lines.append("- 현재 최소 Coverage 기준에서 별도 누락정보가 식별되지 않았습니다.")
 
-    lines.extend(["", "## 5. KB·K-SURE 상담 후보", ""])
+    lines.extend(["", "## 6. KB·K-SURE 상담 후보", ""])
     if selected_products:
         lines.extend(
             [
@@ -197,13 +259,13 @@ def render_single_transaction_assessment_markdown(
         )
         for candidate in selected_products:
             lines.append(
-                "| {provider} | {name} | {status} | {need} | {action} | `{identifier}` |".format(
+                "| {provider} | {name} | {status} | {need} | {action} | {identifier} |".format(
                     provider=_escape_cell(candidate.provider),
                     name=_escape_cell(candidate.product_or_service_name),
                     status=_escape_cell(candidate.candidate_status),
                     need=_escape_cell(candidate.matched_need),
                     action=_escape_cell(candidate.next_action),
-                    identifier=_escape_cell(candidate.product_candidate_id),
+                    identifier=_escape_cell(_ref_ids([candidate.product_candidate_id])),
                 )
             )
     else:
@@ -213,8 +275,8 @@ def render_single_transaction_assessment_markdown(
     if consultations:
         for requirement in consultations:
             lines.append(
-                f"- **{requirement.consultation_route}** · `{requirement.requirement_id}`: "
-                + requirement.purpose
+                f"- **{requirement.consultation_route}** · "
+                f"[REF:{requirement.requirement_id}]: {requirement.purpose}"
             )
             for question in requirement.questions_to_confirm:
                 lines.append(f"  - 확인: {question}")
@@ -226,21 +288,21 @@ def render_single_transaction_assessment_markdown(
     lines.extend(
         [
             "",
-            "## 6. 실행계획",
+            "## 7. 실행계획",
             "",
-            "| 순서 | 작업 | 담당 | 상태 | 선행 작업 | 준비자료 |",
-            "|---:|---|---|---|---|---|",
+            "| 순서 | 작업 | 담당 | 상태 | 선행 작업 | 준비자료 | 근거 ID |",
+            "|---:|---|---|---|---|---|---|",
         ]
     )
     if brief.action_plan:
         lines.extend(_action_rows(brief.action_plan))
     else:
-        lines.append("| - | 생성된 실행계획 없음 | - | - | - | - |")
+        lines.append("| - | 생성된 실행계획 없음 | - | - | - | - | - |")
 
     lines.extend(
         [
             "",
-            "## 7. 파이프라인 실행기록",
+            "## 8. 파이프라인 실행기록",
             "",
             "| 순서 | 단계 | 상태 | 입력 Case hash | 출력 Case hash | 생성 레코드 |",
             "|---:|---|---|---|---|---|",
@@ -254,24 +316,25 @@ def render_single_transaction_assessment_markdown(
                 status=_escape_cell(_STAGE_STATUS_LABELS.get(trace.status, trace.status)),
                 before=trace.case_before_hash,
                 after=trace.case_after_hash,
-                records=_escape_cell(", ".join(trace.generated_record_ids) or "없음"),
+                records=_escape_cell(_ref_ids(trace.generated_record_ids)),
             )
         )
 
     lines.extend(
         [
             "",
-            "## 8. 근거 및 감사 참조",
+            "## 9. 근거 및 감사 참조",
             "",
-            f"- Country fact IDs: {', '.join(brief.country_fact_ids) or '없음'}",
-            f"- Compliance screening IDs: {', '.join(brief.compliance_screening_ids) or '없음'}",
-            f"- Calculation IDs: {', '.join(brief.calculation_ids) or '없음'}",
-            f"- Product candidate IDs: {', '.join(brief.product_candidate_ids) or '없음'}",
-            f"- Consultation requirement IDs: {', '.join(brief.consultation_requirement_ids) or '없음'}",
-            f"- Brief source ID: `{brief.source.source_id}`",
+            f"- Country fact IDs: {_ref_ids(brief.country_fact_ids)}",
+            f"- Compliance screening IDs: {_ref_ids(brief.compliance_screening_ids)}",
+            f"- Calculation IDs: {_ref_ids(brief.calculation_ids)}",
+            f"- Product candidate IDs: {_ref_ids(brief.product_candidate_ids)}",
+            f"- Consultation requirement IDs: {_ref_ids(brief.consultation_requirement_ids)}",
+            f"- Finding review IDs: {_ref_ids([item.review_id for item in case.finding_reviews])}",
+            f"- Brief source ID: [REF:{brief.source.source_id}]",
             f"- Brief rule hash: `{brief.source.content_hash or '-'}`",
             "",
-            "## 9. 제한사항",
+            "## 10. 제한사항",
             "",
         ]
     )
