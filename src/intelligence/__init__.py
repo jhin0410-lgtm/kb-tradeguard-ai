@@ -6,6 +6,7 @@ from .country_compliance import (
     build_world_bank_country_facts,
     load_fatf_registry,
 )
+from .decision_brief_report import render_single_transaction_assessment_markdown
 from .document_reconciliation import (
     DocumentComparisonResult,
     DocumentReconciliationOutcome,
@@ -123,6 +124,7 @@ __all__ = [
     "load_transaction_decision_brief_registry",
     "match_trade_finance_products",
     "reconcile_trade_documents",
+    "render_single_transaction_assessment_markdown",
     "reviewed_terms_from_document",
     "run_single_transaction_assessment",
     "run_single_transaction_package",
