@@ -381,9 +381,7 @@ def _match_one_product(
         missing_inputs.extend(missing_documents)
 
     if missing_inputs:
-        unresolved.extend(
-            item for item in missing_inputs if item not in unresolved
-        )
+        unresolved.extend(item for item in missing_inputs if item not in unresolved)
 
     record_status = "partial" if status == "insufficient_information" else "verified"
     candidate = ProductCandidate(
@@ -474,20 +472,35 @@ def apply_product_matching(
 ) -> tuple[UnifiedCopilotCase, ProductMatchingOutcome]:
     """Replace current registry-derived candidates while preserving other case records."""
 
-    known_transaction_ids = {
-        str(item.get("transaction_id")) for item in case.approved_transactions
+    approved_transactions = {
+        str(item.get("transaction_id")): str(item.get("transaction_type"))
+        for item in case.approved_transactions
+        if item.get("transaction_id") is not None
     }
     missing_transactions = sorted(
         {
             profile.transaction_id
             for profile in profiles
-            if profile.transaction_id not in known_transaction_ids
+            if profile.transaction_id not in approved_transactions
         }
     )
     if missing_transactions:
         raise ValueError(
             "Product matching profiles reference unknown approved transactions: "
             + ", ".join(missing_transactions)
+        )
+
+    direction_conflicts = sorted(
+        {
+            f"{profile.transaction_id}: case={approved_transactions[profile.transaction_id]}, profile={profile.transaction_direction}"
+            for profile in profiles
+            if approved_transactions[profile.transaction_id] != profile.transaction_direction
+        }
+    )
+    if direction_conflicts:
+        raise ValueError(
+            "Product matching profile direction conflicts with approved transaction data: "
+            + "; ".join(direction_conflicts)
         )
 
     resolved_path = (
