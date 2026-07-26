@@ -25,7 +25,7 @@ def _source(source_id="SRC-DOC"):
     )
 
 
-def _case(evidence_status="approved"):
+def _case(evidence_status="approved", named_place=None):
     payment = PaymentStructure(
         payment_structure_id="PAY-001",
         transaction_id="EXP-001",
@@ -42,7 +42,7 @@ def _case(evidence_status="approved"):
         document_type="contract",
         incoterms_rule="FCA",
         incoterms_year=2020,
-        named_place=None,
+        named_place=named_place,
         payment_structure_id=payment.payment_structure_id,
         linked_transaction_ids=["EXP-001"],
         reviewed_fields={
@@ -125,3 +125,27 @@ def test_screening_is_idempotent_for_same_reviewed_snapshot():
     assert len(second.trade_finance.risk_signals) == len(first.trade_finance.risk_signals)
     assert second.case_hash == first.case_hash
     assert second_outcome.clause_finding_ids == first_outcome.clause_finding_ids
+
+
+def test_resolved_document_rule_removes_stale_prior_finding():
+    first, _ = apply_trade_document_screening(_case())
+    corrected = _case(named_place="Busan New Port")
+    corrected_domain = corrected.trade_finance.model_copy(
+        update={
+            "clause_findings": first.trade_finance.clause_findings,
+            "risk_signals": first.trade_finance.risk_signals,
+        }
+    )
+    corrected_case = corrected.model_copy(update={"trade_finance": corrected_domain})
+
+    updated, outcome = apply_trade_document_screening(corrected_case)
+
+    assert outcome.clause_finding_ids == []
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.clause_findings
+    )
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.risk_signals
+    )
