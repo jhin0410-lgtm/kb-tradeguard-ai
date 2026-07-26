@@ -121,13 +121,15 @@ class FindingReviewDecision(BaseModel):
     supersedes_review_id: str | None = None
 
     @model_validator(mode="after")
-    def non_confirmation_requires_note(self):
+    def review_contract_is_complete(self):
         if self.decision in {"dismissed", "needs_more_information"} and not self.review_note:
             raise ValueError(
                 "Dismissed or needs-more-information decisions require a review_note"
             )
         if self.supersedes_review_id == self.review_id:
             raise ValueError("A finding review cannot supersede itself")
+        if self.reviewed_at.tzinfo is None or self.reviewed_at.utcoffset() is None:
+            raise ValueError("Finding review timestamps must include a timezone")
         return self
 
 
@@ -156,7 +158,7 @@ class UnifiedCopilotCase(BaseModel):
     findings: list[CaseFinding] = Field(default_factory=list)
     finding_reviews: list[FindingReviewDecision] = Field(default_factory=list)
     missing_inputs: list[MissingInput] = Field(default_factory=list)
-    case_version: str = "copilot-case/1.2"
+    case_version: str = "copilot-case/1.1"
 
     @model_validator(mode="after")
     def calculation_keys_must_match_ids(self):
@@ -218,6 +220,8 @@ class UnifiedCopilotCase(BaseModel):
         payload["identity"].pop("created_at", None)
         for result in payload["calculations"].values():
             result.pop("calculation_timestamp", None)
+        if not payload.get("finding_reviews"):
+            payload.pop("finding_reviews", None)
         return payload
 
     @property
