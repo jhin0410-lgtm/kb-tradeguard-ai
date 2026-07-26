@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from .advisor_models import CalculationResult
 from .advisor_tools import ReadOnlyAdvisorTools
 from .copilot_case import CaseScenario, UnifiedCopilotCase
+from .copilot_fx_execution import build_fx_shock_execution_contract
 from .copilot_scenarios import (
     ScenarioCandidate,
     ScenarioExecutionRequest,
@@ -117,6 +118,27 @@ class GovernedScenarioExecutor:
                     delay_days,
                     view="expected",
                 )
+            ]
+
+        if request.execution_tool == "compare_hedge_ratios":
+            contract = build_fx_shock_execution_contract(request)
+            active = set(self._tools.active_transaction_currencies)
+            unsupported = sorted(set(contract.currencies) - active)
+            if unsupported:
+                raise ValueError(
+                    "FX-shock request contains currencies absent from the approved portfolio: "
+                    + ", ".join(unsupported)
+                )
+            return [
+                self._tools.compare_hedge_ratios(
+                    currency=currency,
+                    basis=contract.analysis_basis,
+                    scenarios=contract.scenario_percentages,
+                    hedge_ratios=contract.hedge_ratios,
+                    tenor_months=contract.tenor_months,
+                    spread=contract.spread,
+                )
+                for currency in contract.currencies
             ]
 
         raise NotImplementedError(
