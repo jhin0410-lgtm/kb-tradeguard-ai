@@ -23,7 +23,7 @@ def _document_source(source_id="SRC-DOC"):
         source_tier="user_provided",
         source_kind="user_document",
         source_locator="fixture://trade-document",
-        as_of_date=date(2026, 7, 26),
+        as_of_date=date(2026, 7, 27),
         effective_date_verified=True,
     )
 
@@ -78,6 +78,11 @@ def _lc(**updates):
             "presentation_period_days": 21,
             "buyer_controlled_document_requirements": [],
             "expiry_place": "Seoul, Republic of Korea",
+            "availability_type": "sight",
+            "tenor_start_event": "unknown",
+            "draft_required": False,
+            "draft_tenor_text": None,
+            "acceptance_party": None,
         },
         "source": _document_source("SRC-LC"),
         "record_status": "verified",
@@ -86,11 +91,12 @@ def _lc(**updates):
     return TradeDocumentProfile(**payload)
 
 
-def _lc_payment(governing_rules=None):
+def _lc_payment(governing_rules=None, tenor_days=None):
     return PaymentStructure(
         payment_structure_id="PAY-LC-001",
         transaction_id="EXP-001",
         method="letter_of_credit",
+        tenor_days=tenor_days,
         issuing_bank="Example International Bank",
         irrevocable=True,
         governing_rules=governing_rules or ["UCP 600"],
@@ -102,8 +108,8 @@ def _lc_payment(governing_rules=None):
 def test_rule_registry_has_unique_rules_and_valid_source_links():
     registry = load_trade_document_rule_registry()
 
-    assert registry.registry_version == "trade-document-rules/1.0"
-    assert len(registry.rules) >= 10
+    assert registry.registry_version == "trade-document-rules/1.1"
+    assert len(registry.rules) == 22
     assert len({rule.rule_id for rule in registry.rules}) == len(registry.rules)
     assert "legal advice" in registry.authority_boundary
 
@@ -172,6 +178,11 @@ def test_lc_expiry_before_latest_shipment_is_critical():
             "presentation_period_days": 21,
             "buyer_controlled_document_requirements": [],
             "expiry_place": "Seoul, Republic of Korea",
+            "availability_type": "sight",
+            "tenor_start_event": "unknown",
+            "draft_required": False,
+            "draft_tenor_text": None,
+            "acceptance_party": None,
         },
     )
     findings = evaluate_trade_document(lc, _lc_payment())
@@ -191,6 +202,11 @@ def test_lc_buyer_controlled_document_and_missing_ucp_are_separate_findings():
                 "Certificate of acceptance issued and signed only by applicant"
             ],
             "expiry_place": "Seoul, Republic of Korea",
+            "availability_type": "sight",
+            "tenor_start_event": "unknown",
+            "draft_required": False,
+            "draft_tenor_text": None,
+            "acceptance_party": None,
         }
     )
     findings = evaluate_trade_document(lc, _lc_payment(governing_rules=["Local law only"]))
@@ -200,13 +216,58 @@ def test_lc_buyer_controlled_document_and_missing_ucp_are_separate_findings():
     assert any("LC-GOVERNING-RULES-UNRESOLVED" in item for item in ids)
 
 
-def test_lc_with_ucp_600_does_not_trigger_governing_rule_finding():
-    findings = evaluate_trade_document(_lc(), _lc_payment(["ICC UCP 600"] ))
+def test_lc_with_ucp_600_and_sight_availability_does_not_trigger_payment_timing_findings():
+    findings = evaluate_trade_document(_lc(), _lc_payment(["ICC UCP 600"]))
+    ids = {item.clause_finding_id for item in findings}
 
-    assert not any(
-        "LC-GOVERNING-RULES-UNRESOLVED" in item.clause_finding_id
-        for item in findings
+    assert not any("LC-GOVERNING-RULES-UNRESOLVED" in item for item in ids)
+    assert not any("LC-AVAILABILITY-MISSING" in item for item in ids)
+    assert not any("LC-DEFERRED-TENOR-MISSING" in item for item in ids)
+    assert not any("LC-DEFERRED-START-EVENT-MISSING" in item for item in ids)
+
+
+def test_usance_lc_missing_tenor_and_start_event_creates_separate_findings():
+    reviewed = dict(_lc().reviewed_fields)
+    reviewed.update(
+        {
+            "availability_type": "usance",
+            "tenor_start_event": "unknown",
+            "draft_required": True,
+            "draft_tenor_text": None,
+        }
     )
+    findings = evaluate_trade_document(
+        _lc(reviewed_fields=reviewed),
+        _lc_payment(tenor_days=None),
+    )
+    ids = {item.clause_finding_id for item in findings}
+
+    assert any("LC-DEFERRED-TENOR-MISSING" in item for item in ids)
+    assert any("LC-DEFERRED-START-EVENT-MISSING" in item for item in ids)
+    assert any("LC-DRAFT-TENOR-TEXT-MISSING" in item for item in ids)
+
+
+def test_complete_acceptance_lc_does_not_trigger_deferred_detail_findings():
+    reviewed = dict(_lc().reviewed_fields)
+    reviewed.update(
+        {
+            "availability_type": "acceptance",
+            "tenor_start_event": "bill_of_lading_date",
+            "draft_required": True,
+            "draft_tenor_text": "90 days after B/L date",
+            "acceptance_party": "issuing bank",
+        }
+    )
+    findings = evaluate_trade_document(
+        _lc(reviewed_fields=reviewed),
+        _lc_payment(tenor_days=90),
+    )
+    ids = {item.clause_finding_id for item in findings}
+
+    assert not any("LC-DEFERRED-TENOR-MISSING" in item for item in ids)
+    assert not any("LC-DEFERRED-START-EVENT-MISSING" in item for item in ids)
+    assert not any("LC-ACCEPTANCE-PARTY-MISSING" in item for item in ids)
+    assert not any("LC-DRAFT-TENOR-TEXT-MISSING" in item for item in ids)
 
 
 def test_payment_structure_must_match_document_and_transaction():
