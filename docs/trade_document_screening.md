@@ -78,7 +78,7 @@ The applicable-rules check does not presume that every credit is automatically g
 
 `apply_trade_document_screening` evaluates supported documents in `UnifiedCopilotCase.trade_finance`, verifies that each document references approved case evidence and an existing payment structure, and immutably attaches findings and risk signals to the case snapshot.
 
-Repeated evaluation of the same reviewed snapshot is idempotent by deterministic finding and signal IDs.
+Repeated evaluation of the same reviewed snapshot is idempotent by deterministic finding and signal IDs. Reassessment now replaces findings produced by the same rule registry, so a corrected reviewed field removes the stale prior finding and signal.
 
 ## Validation
 
@@ -89,15 +89,23 @@ py -3.13 -m compileall -q app.py copilot_app.py src tests scripts
 py -3.13 -c "import app; import copilot_app; import src"
 ```
 
-## Next document-intelligence unit
+## Implemented follow-on: cross-document reconciliation
 
-The next unit should reconcile facts across multiple reviewed documents rather than add more isolated rules. Initial deterministic comparisons should cover:
+The repository now also reconciles facts across multiple reviewed documents through:
+
+```text
+data/reference/trade_document_reconciliation_rules_v1.json
+src/intelligence/document_reconciliation.py
+```
+
+The first deterministic comparisons cover:
 
 - legal party names;
 - currency and amount;
 - Incoterms rule, edition, and named place;
-- shipment and expiry dates;
-- contract payment terms versus L/C terms;
-- invoice, packing-list, and transport-document references.
+- contract shipment date versus the L/C latest shipment date;
+- contract, commercial-invoice, and letter-of-credit consistency.
 
-Tolerance, optionality, and amendment terms must be represented explicitly before an amount or date difference is called a discrepancy.
+Tolerance, aliases, amendments, and superseded documents must be represented explicitly before a difference is treated as resolved. See `docs/document_reconciliation.md` for the detailed authority boundary and validation procedure.
+
+The next delivery unit is governed risk prioritization across country, counterparty, payment, document, company-capacity, liquidity, and foreign-exchange evidence.
