@@ -8,10 +8,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import date
+from pathlib import Path
 
-from src.data_providers import ProviderRequestError, WorldBankCountryProvider
-from src.intelligence import (
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.data_providers import (  # noqa: E402
+    ProviderRequestError,
+    ProviderResponseError,
+    WorldBankCountryProvider,
+)
+from src.intelligence import (  # noqa: E402
     build_fatf_country_fact,
     build_fatf_country_screening,
     build_world_bank_country_facts,
@@ -34,20 +43,20 @@ def main() -> int:
             start_year=args.start_year,
             end_year=args.end_year,
         )
-    except ProviderRequestError as exc:
+        facts = build_world_bank_country_facts(payloads)
+        fatf_fact = build_fatf_country_fact(
+            country_code,
+            analysis_as_of_date=date.today(),
+        )
+        fatf_screening = build_fatf_country_screening(
+            country_code,
+            country_name,
+            analysis_as_of_date=date.today(),
+        )
+    except (ProviderRequestError, ProviderResponseError, ValueError) as exc:
         print(json.dumps({"status": "provider_error", "error": str(exc)}, ensure_ascii=False))
         return 1
 
-    facts = build_world_bank_country_facts(payloads)
-    fatf_fact = build_fatf_country_fact(
-        country_code,
-        analysis_as_of_date=date.today(),
-    )
-    fatf_screening = build_fatf_country_screening(
-        country_code,
-        country_name,
-        analysis_as_of_date=date.today(),
-    )
     output = {
         "status": "ok",
         "country_code": country_code,
