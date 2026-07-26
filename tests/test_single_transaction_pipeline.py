@@ -5,13 +5,13 @@ import pytest
 from pydantic import ValidationError
 
 from src.copilot_case import CaseDataAsset, CaseEvidenceItem, CaseIdentity, UnifiedCopilotCase
+from src.intelligence.product_matching import TradeFinanceNeedProfile
 from src.intelligence.single_transaction_pipeline import (
     SingleTransactionAssessmentRequest,
     TransactionAssessmentPipelineError,
     load_single_transaction_pipeline_manifest,
     run_single_transaction_assessment,
 )
-from src.intelligence.product_matching import TradeFinanceNeedProfile
 from src.intelligence.transaction_capacity import TransactionCapacityRequest
 from src.trade_finance_domain import (
     CompanyProfile,
@@ -38,7 +38,10 @@ def _source(source_id, kind="user_document", tier="user_provided"):
     )
 
 
-def _full_case(evidence_status="approved"):
+def _full_case(
+    evidence_status="approved",
+    counterparty_due_diligence_status="professional_credit_investigation_required",
+):
     company = CompanyProfile(
         company_id="COMPANY-001",
         legal_name="Example Exporter Co., Ltd.",
@@ -68,7 +71,7 @@ def _full_case(evidence_status="approved"):
         country_code="VN",
         registration_number="VN-REG-001",
         relationship_status="new",
-        due_diligence_status="professional_credit_investigation_required",
+        due_diligence_status=counterparty_due_diligence_status,
         prior_payment_history="none",
         source=_source("SRC-BUYER"),
         record_status="verified",
@@ -344,7 +347,11 @@ def test_pipeline_is_idempotent_for_same_reviewed_case_and_request():
 
 
 def test_optional_stages_are_explicitly_skipped_and_brief_reports_gaps():
-    case = _full_case()
+    # Remove the independent high-severity counterparty concern so this test isolates
+    # disposition behavior caused by missing optional-stage inputs.
+    case = _full_case(
+        counterparty_due_diligence_status="professional_credit_investigation_completed"
+    )
     domain = case.trade_finance.model_copy(
         update={"payment_structures": [], "trade_documents": []}
     )
