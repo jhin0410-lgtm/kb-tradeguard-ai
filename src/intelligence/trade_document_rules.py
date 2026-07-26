@@ -31,6 +31,10 @@ RuleOperator = Literal[
     "non_empty_list",
     "date_before_field",
     "buyer_acceptance_without_period",
+    "deferred_availability_missing_tenor",
+    "deferred_availability_missing_start_event",
+    "acceptance_missing_party",
+    "draft_required_missing_tenor_text",
 ]
 DocumentKind = Literal["contract", "letter_of_credit"]
 
@@ -202,6 +206,14 @@ def reviewed_terms_from_document(
                 "buyer_controlled_document_requirements", []
             ),
             "expiry_place": reviewed.get("expiry_place"),
+            "availability_type": reviewed.get("availability_type"),
+            "tenor_days": (
+                payment.tenor_days if payment is not None else reviewed.get("tenor_days")
+            ),
+            "tenor_start_event": reviewed.get("tenor_start_event"),
+            "draft_required": reviewed.get("draft_required"),
+            "draft_tenor_text": reviewed.get("draft_tenor_text"),
+            "acceptance_party": reviewed.get("acceptance_party"),
         }
     else:
         raise ValueError(
@@ -230,6 +242,10 @@ def _normalized_text(value: Any) -> str:
     return " ".join(str(value).casefold().split())
 
 
+def _deferred_availability(value: Any) -> bool:
+    return _normalized_text(value) in {"usance", "deferred_payment", "acceptance"}
+
+
 def _rule_triggered(rule: TradeDocumentRule, fields: dict[str, Any]) -> bool:
     value = fields.get(rule.field)
     if rule.operator == "missing":
@@ -254,6 +270,19 @@ def _rule_triggered(rule: TradeDocumentRule, fields: dict[str, Any]) -> bool:
             "buyer" in trigger or "applicant" in trigger or "customer" in trigger
         )
         return depends_on_acceptance and _missing(fields.get("acceptance_period_days"))
+    if rule.operator == "deferred_availability_missing_tenor":
+        return _deferred_availability(value) and _missing(fields.get("tenor_days"))
+    if rule.operator == "deferred_availability_missing_start_event":
+        return _deferred_availability(value) and (
+            _missing(fields.get("tenor_start_event"))
+            or _normalized_text(fields.get("tenor_start_event")) == "unknown"
+        )
+    if rule.operator == "acceptance_missing_party":
+        return _normalized_text(value) == "acceptance" and _missing(
+            fields.get("acceptance_party")
+        )
+    if rule.operator == "draft_required_missing_tenor_text":
+        return value is True and _missing(fields.get("draft_tenor_text"))
     raise ValueError(f"Unsupported trade-document rule operator: {rule.operator}")
 
 
@@ -264,6 +293,21 @@ def _display_value(rule: TradeDocumentRule, fields: dict[str, Any]) -> str:
     if rule.operator == "date_before_field":
         comparison = fields.get(rule.comparison_field or "")
         return f"{rule.field}={value}; {rule.comparison_field}={comparison}"
+    if rule.operator in {
+        "deferred_availability_missing_tenor",
+        "deferred_availability_missing_start_event",
+        "acceptance_missing_party",
+        "draft_required_missing_tenor_text",
+    }:
+        relevant = {
+            "availability_type": fields.get("availability_type"),
+            "tenor_days": fields.get("tenor_days"),
+            "tenor_start_event": fields.get("tenor_start_event"),
+            "draft_required": fields.get("draft_required"),
+            "draft_tenor_text": fields.get("draft_tenor_text"),
+            "acceptance_party": fields.get("acceptance_party"),
+        }
+        return "; ".join(f"{key}={item}" for key, item in relevant.items())
     if isinstance(value, (list, tuple, set)):
         return "; ".join(str(item) for item in value)
     return str(value)
