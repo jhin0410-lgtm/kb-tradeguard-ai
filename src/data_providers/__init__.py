@@ -9,6 +9,7 @@ from .bok_ecos import BOKECOSProvider
 from .kexim_fx import KEXIMFXProvider
 from .nts_business import NTSBusinessStatusProvider
 from .opendart import OpenDARTProvider
+from .world_bank_country import WorldBankCountryProvider
 
 __all__ = [
     "BOKECOSProvider",
@@ -18,4 +19,5 @@ __all__ = [
     "ProviderConfigurationError",
     "ProviderRequestError",
     "ProviderResponseError",
+    "WorldBankCountryProvider",
 ]
