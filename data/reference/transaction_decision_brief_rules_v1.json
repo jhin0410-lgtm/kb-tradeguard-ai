@@ -1,0 +1,44 @@
+{
+  "registry_name": "KB TradeGuard transaction decision brief rules",
+  "registry_version": "transaction-decision-brief/1.0",
+  "effective_date": "2026-07-26",
+  "authority_boundary": "The brief is a deterministic pre-screening synthesis of existing case evidence. It does not approve or reject a transaction, provide legal advice, clear sanctions or AML obligations, determine insurance or guarantee acceptance, or predict bank credit decisions.",
+  "severity_order": ["critical", "high", "medium", "low", "informational"],
+  "category_order": [
+    "compliance",
+    "counterparty",
+    "payment_instrument",
+    "contract_document",
+    "liquidity",
+    "company_capacity",
+    "concentration",
+    "country_transfer",
+    "foreign_exchange",
+    "operational"
+  ],
+  "minimum_coverage": [
+    "counterparty_identity",
+    "country_context",
+    "compliance_screening",
+    "payment_structure",
+    "reviewed_trade_document",
+    "financial_capacity_calculation"
+  ],
+  "disposition_precedence": [
+    "specialist_clearance_required",
+    "conditions_required_before_commitment",
+    "additional_information_required",
+    "review_required",
+    "no_material_screening_flags"
+  ],
+  "action_priority": {
+    "compliance": 10,
+    "counterparty": 20,
+    "information": 25,
+    "document": 30,
+    "capacity": 40,
+    "country": 50,
+    "product_consultation": 60,
+    "reassessment": 90
+  }
+}
