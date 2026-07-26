@@ -22,6 +22,17 @@ from .trade_finance_domain import TradeFinanceDomainState
 CaseDataStatus = Literal["available", "partial", "missing", "not_applicable"]
 ScenarioStatus = Literal["proposed", "approved", "executed", "rejected"]
 EvidenceStatus = Literal["approved", "review_required", "invalid"]
+FindingReviewStatus = Literal["confirmed", "dismissed", "needs_more_information"]
+FindingReviewerRole = Literal[
+    "legal",
+    "bank",
+    "insurer",
+    "logistics",
+    "customs",
+    "trade_finance",
+    "compliance",
+    "other",
+]
 
 
 class CaseIdentity(BaseModel):
@@ -96,6 +107,30 @@ class CaseFinding(BaseModel):
         return self
 
 
+class FindingReviewDecision(BaseModel):
+    """Append-only human review decision over one deterministic clause finding."""
+
+    review_id: str
+    finding_id: str
+    decision: FindingReviewStatus
+    reviewer_role: FindingReviewerRole
+    reviewer_id: str
+    reviewed_at: datetime
+    review_note: str | None = None
+    supporting_evidence_ids: list[str] = Field(default_factory=list)
+    supersedes_review_id: str | None = None
+
+    @model_validator(mode="after")
+    def non_confirmation_requires_note(self):
+        if self.decision in {"dismissed", "needs_more_information"} and not self.review_note:
+            raise ValueError(
+                "Dismissed or needs-more-information decisions require a review_note"
+            )
+        if self.supersedes_review_id == self.review_id:
+            raise ValueError("A finding review cannot supersede itself")
+        return self
+
+
 class MissingInput(BaseModel):
     input_name: str
     reason: str
@@ -119,8 +154,9 @@ class UnifiedCopilotCase(BaseModel):
     calculations: dict[str, CalculationResult] = Field(default_factory=dict)
     scenarios: list[CaseScenario] = Field(default_factory=list)
     findings: list[CaseFinding] = Field(default_factory=list)
+    finding_reviews: list[FindingReviewDecision] = Field(default_factory=list)
     missing_inputs: list[MissingInput] = Field(default_factory=list)
-    case_version: str = "copilot-case/1.1"
+    case_version: str = "copilot-case/1.2"
 
     @model_validator(mode="after")
     def calculation_keys_must_match_ids(self):
@@ -134,6 +170,9 @@ class UnifiedCopilotCase(BaseModel):
                 "Calculation dictionary keys must equal their calculation IDs: "
                 + ", ".join(mismatches)
             )
+        review_ids = [item.review_id for item in self.finding_reviews]
+        if len(review_ids) != len(set(review_ids)):
+            raise ValueError("Finding review IDs must be unique")
         return self
 
     @property
@@ -205,6 +244,7 @@ class UnifiedCopilotCase(BaseModel):
             "unresolved_evidence_ids": self.unresolved_evidence_ids,
             "calculation_ids": sorted(self.calculations),
             "scenario_ids": [item.scenario_id for item in self.scenarios],
+            "finding_review_ids": [item.review_id for item in self.finding_reviews],
             "missing_inputs": [item.input_name for item in self.missing_inputs],
             "capabilities": self.capabilities.model_dump(),
             "trade_finance_domain_version": self.trade_finance.domain_version,
