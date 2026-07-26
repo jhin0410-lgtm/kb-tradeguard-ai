@@ -27,6 +27,14 @@ from .product_matching import (
     load_product_registry,
     match_trade_finance_products,
 )
+from .single_transaction_pipeline import (
+    PipelineStageTrace,
+    SingleTransactionAssessmentRequest,
+    SingleTransactionAssessmentResult,
+    TransactionAssessmentPipelineError,
+    load_single_transaction_pipeline_manifest,
+    run_single_transaction_assessment,
+)
 from .trade_document_assessment import (
     TradeDocumentScreeningOutcome,
     apply_trade_document_screening,
@@ -62,11 +70,15 @@ __all__ = [
     "DocumentReconciliationResult",
     "FinancialHealthResult",
     "FinancialTrendResult",
+    "PipelineStageTrace",
     "ProductMatchingOutcome",
     "ProductMatchingResult",
     "ReconciliationPolicy",
+    "SingleTransactionAssessmentRequest",
+    "SingleTransactionAssessmentResult",
     "TradeDocumentScreeningOutcome",
     "TradeFinanceNeedProfile",
+    "TransactionAssessmentPipelineError",
     "TransactionCapacityAnalysis",
     "TransactionCapacityOutcome",
     "TransactionCapacityRequest",
@@ -92,10 +104,12 @@ __all__ = [
     "load_fatf_registry",
     "load_product_registry",
     "load_reconciliation_registry",
+    "load_single_transaction_pipeline_manifest",
     "load_trade_document_rule_registry",
     "load_transaction_capacity_registry",
     "load_transaction_decision_brief_registry",
     "match_trade_finance_products",
     "reconcile_trade_documents",
     "reviewed_terms_from_document",
+    "run_single_transaction_assessment",
 ]
