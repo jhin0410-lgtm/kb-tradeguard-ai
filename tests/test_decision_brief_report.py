@@ -35,9 +35,11 @@ def test_markdown_report_is_deterministic_and_contains_audit_links():
     assert run.assessment_result.pipeline_id in first
     assert run.assessment_result.transaction_id in first
     assert run.assessment_result.brief.source.source_id in first
-    assert "## 7. 파이프라인 실행기록" in first
+    assert "## 4. Finding 전문가 검토" in first
+    assert "## 8. 파이프라인 실행기록" in first
     assert "계약서·L/C 사전검사" in first
     assert "건너뜀" in first
+    assert "[REF:" in first
 
 
 def test_markdown_report_preserves_missing_information_and_authority_boundary():
