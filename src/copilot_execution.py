@@ -2,7 +2,7 @@
 
 This module is the execution boundary between scenario intelligence and the existing
 financial engine. It never approves a scenario implicitly and never recalculates a
-financial result outside ``ReadOnlyAdvisorTools``.
+financial result outside governed deterministic executors.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from .advisor_models import CalculationResult
 from .advisor_tools import ReadOnlyAdvisorTools
 from .copilot_case import CaseScenario, UnifiedCopilotCase
 from .copilot_fx_execution import build_fx_shock_execution_contract
+from .copilot_import_cost_execution import execute_import_cost_scenario
 from .copilot_scenarios import (
     ScenarioCandidate,
     ScenarioExecutionRequest,
@@ -84,7 +85,7 @@ class GovernedScenarioExecutor:
             human_approved=human_approved,
         )
         before_hash = case.case_hash
-        results = self._dispatch(request)
+        results = self._dispatch(case, request)
         updated = _attach_results(case, results)
         updated = _replace_scenario(
             updated,
@@ -99,13 +100,17 @@ class GovernedScenarioExecutor:
             case_before_hash=before_hash,
             case_after_hash=updated.case_hash,
             limitations=[
-                "Execution used the existing deterministic engine; the Copilot did not perform financial arithmetic.",
+                "Execution used governed deterministic engines; the Copilot did not perform financial arithmetic.",
                 *candidate.limitations,
             ],
         )
         return updated, outcome
 
-    def _dispatch(self, request: ScenarioExecutionRequest) -> list[CalculationResult]:
+    def _dispatch(
+        self,
+        case: UnifiedCopilotCase,
+        request: ScenarioExecutionRequest,
+    ) -> list[CalculationResult]:
         if request.execution_tool == "run_cashflow_delay_scenario":
             if len(request.target_transaction_ids) != 1:
                 raise ValueError(
@@ -140,6 +145,9 @@ class GovernedScenarioExecutor:
                 )
                 for currency in contract.currencies
             ]
+
+        if request.execution_tool == "run_import_cost_scenario":
+            return [execute_import_cost_scenario(case, request)]
 
         raise NotImplementedError(
             f"No governed deterministic executor is registered for {request.execution_tool}."
