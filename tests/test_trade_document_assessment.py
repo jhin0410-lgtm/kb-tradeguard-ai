@@ -20,7 +20,7 @@ def _source(source_id="SRC-DOC"):
         source_tier="user_provided",
         source_kind="user_document",
         source_locator="fixture://contract",
-        as_of_date=date(2026, 7, 26),
+        as_of_date=date(2026, 7, 27),
         effective_date_verified=True,
     )
 
@@ -58,7 +58,7 @@ def _case(evidence_status="approved", named_place=None):
     return UnifiedCopilotCase(
         identity=CaseIdentity(
             case_id="CASE-DOC-ASSESSMENT",
-            analysis_as_of_date=date(2026, 7, 26),
+            analysis_as_of_date=date(2026, 7, 27),
         ),
         evidence=[
             CaseEvidenceItem(
@@ -147,5 +147,47 @@ def test_resolved_document_rule_removes_stale_prior_finding():
     )
     assert not any(
         item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.risk_signals
+    )
+
+
+def test_registry_upgrade_replaces_prior_version_findings_and_signals():
+    first, _ = apply_trade_document_screening(_case())
+    old_source_id = "TRADE-DOCUMENT-RULES-trade-document-rules/1.0"
+    stale_findings = [
+        item.model_copy(
+            update={
+                "source": item.source.model_copy(update={"source_id": old_source_id})
+            }
+        )
+        for item in first.trade_finance.clause_findings
+    ]
+    stale_signals = [
+        item.model_copy(
+            update={
+                "source": item.source.model_copy(update={"source_id": old_source_id})
+            }
+        )
+        for item in first.trade_finance.risk_signals
+    ]
+    corrected = _case(named_place="Busan New Port")
+    corrected_domain = corrected.trade_finance.model_copy(
+        update={
+            "clause_findings": stale_findings,
+            "risk_signals": stale_signals,
+        }
+    )
+    corrected_case = corrected.model_copy(update={"trade_finance": corrected_domain})
+
+    updated, outcome = apply_trade_document_screening(corrected_case)
+
+    assert outcome.clause_finding_ids == []
+    assert outcome.risk_signal_ids == []
+    assert not any(
+        item.source.source_id == old_source_id
+        for item in updated.trade_finance.clause_findings
+    )
+    assert not any(
+        item.source.source_id == old_source_id
         for item in updated.trade_finance.risk_signals
     )
