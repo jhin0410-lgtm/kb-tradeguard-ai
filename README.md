@@ -12,7 +12,13 @@ it does not do financial arithmetic or modify the portfolio.
 
 ## What the application provides
 
-The Streamlit application has seven tabs:
+The primary Copilot entrypoint composes the reviewed case into one auditable
+workspace containing the objective, dependency-aware plan, data readiness,
+scenario candidates, grounded risk chains, consultation questions, execution
+trace, citations, and audit export. It does not execute scenarios or approve
+financial decisions.
+
+The supporting Streamlit application retains seven detailed tabs:
 
 1. multi-row document review and explicit approval;
 2. portfolio;
@@ -68,10 +74,18 @@ Availability and customer eligibility always require current verification.
 
 ## Run
 
+Primary Global Trade Copilot workspace:
+
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+python -m streamlit run copilot_app.py
+```
+
+Supporting detailed seven-tab dashboard:
+
+```powershell
 python -m streamlit run app.py
 ```
 
@@ -97,8 +111,8 @@ required by that provider.
 
 ```powershell
 python -m pytest -q
-python -m compileall -q app.py src tests
-python -c "import app; import src"
+python -m compileall -q app.py copilot_app.py src tests
+python -c "import app; import copilot_app; import src"
 ```
 
 The equivalent one-command check is `test.cmd`; `.\test.ps1` is also provided.
@@ -117,7 +131,6 @@ run uses synthetic data and writes redacted evidence without credentials or
 uploaded documents.
 
 This prototype has no real-time rates, OCR, transaction execution, actual KB
-system/product/pricing integration, official credit rating, credit limit,
-loan approval, eligibility or suitability decision, guaranteed result, or
+system/product/pricing integration, official credit rating, credit limit, loan approval, eligibility or suitability decision, guaranteed result, or
 personalized financial advice. All outputs are simulations or general
 considerations requiring professional review.
