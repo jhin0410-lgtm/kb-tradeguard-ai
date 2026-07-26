@@ -180,16 +180,21 @@ def test_kb_candidate_is_a_consultation_route_not_an_approval_claim():
         declared_needs=["export_working_capital"],
         preferred_bank="국민은행",
     )
-    candidate = _by_product(match_trade_finance_products([profile]))[
-        "KB 수출기업 우대대출"
-    ]
+    result = match_trade_finance_products([profile])
+    candidate = _by_product(result)["KB 수출기업 우대대출"]
+    requirement = next(
+        item
+        for item in result.consultation_requirements
+        if "KB 수출기업 우대대출" in item.purpose
+    )
 
     assert candidate.candidate_status == "consultation_candidate"
     assert any(
         "KB 내부 신용심사" in item
         for item in candidate.unresolved_eligibility_conditions
     )
-    assert "상담" in candidate.next_action
+    assert requirement.consultation_route == "bank_relationship_manager"
+    assert candidate.next_action.endswith("확인한다.")
     assert any("not an institutional decision" in item for item in candidate.limitations)
 
 
