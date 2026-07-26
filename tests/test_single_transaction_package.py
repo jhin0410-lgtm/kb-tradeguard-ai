@@ -191,6 +191,7 @@ def test_export_writes_hashed_audit_artifacts(tmp_path):
         "updated_case_canonical.json",
         "assessment_result.json",
         "decision_brief.json",
+        "decision_brief.md",
         "stage_trace.json",
         "audit_summary.json",
     }
@@ -202,6 +203,14 @@ def test_export_writes_hashed_audit_artifacts(tmp_path):
         assert path.exists()
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         assert digest == export.artifact_sha256[filename]
+
+    markdown = Path(export.artifact_paths["decision_brief.md"]).read_text(
+        encoding="utf-8"
+    )
+    assert "# KB TradeGuard 단일 거래 사전진단 보고서" in markdown
+    assert "## 4. 부족한 정보" in markdown
+    assert run.output_case_hash in markdown
+    assert "거래 승인·거절" in markdown
 
     manifest = json.loads(Path(export.manifest_path).read_text(encoding="utf-8"))
     assert manifest["input_package_hash"] == run.input_package_hash
