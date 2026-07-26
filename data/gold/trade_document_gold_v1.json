@@ -1,0 +1,448 @@
+{
+  "dataset_name": "KB TradeGuard trade-document gold cases",
+  "dataset_version": "trade-document-gold/1.0",
+  "created_date": "2026-07-27",
+  "source_mode": "synthetic_gold",
+  "authority_boundary": "Synthetic reviewed-field fixtures with project-authored expected Rule IDs. They test deterministic behavior and are not legal opinions or documentary-compliance decisions.",
+  "cases": [
+    {
+      "case_id": "GOLD-LC-SIGHT-CLEAN",
+      "description": "Complete sight L/C reviewed fields",
+      "document": {
+        "document_id": "DOC-GOLD-LC-SIGHT",
+        "evidence_id": "EVID-GOLD-LC-SIGHT",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-SIGHT",
+        "linked_transaction_ids": ["EXP-GOLD-001"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "sight",
+          "tenor_start_event": "unknown",
+          "draft_required": false,
+          "draft_tenor_text": null,
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-SIGHT",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-SIGHT-CLEAN",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-SIGHT",
+        "transaction_id": "EXP-GOLD-001",
+        "method": "letter_of_credit",
+        "issuing_bank": "Example International Bank",
+        "irrevocable": true,
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-SIGHT",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-SIGHT-CLEAN/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "expected_rule_ids": [],
+      "forbidden_rule_ids": [
+        "LC-AVAILABILITY-MISSING",
+        "LC-DEFERRED-TENOR-MISSING",
+        "LC-DEFERRED-START-EVENT-MISSING"
+      ]
+    },
+    {
+      "case_id": "GOLD-LC-USANCE-INCOMPLETE",
+      "description": "Usance L/C with no day count, start event, or draft tenor wording",
+      "document": {
+        "document_id": "DOC-GOLD-LC-USANCE-MISSING",
+        "evidence_id": "EVID-GOLD-LC-USANCE-MISSING",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-USANCE-MISSING",
+        "linked_transaction_ids": ["EXP-GOLD-002"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "usance",
+          "tenor_start_event": "unknown",
+          "draft_required": true,
+          "draft_tenor_text": null,
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-USANCE-MISSING",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-USANCE-INCOMPLETE",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-USANCE-MISSING",
+        "transaction_id": "EXP-GOLD-002",
+        "method": "letter_of_credit",
+        "issuing_bank": "Example International Bank",
+        "irrevocable": true,
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-USANCE-MISSING",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-USANCE-INCOMPLETE/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "partial"
+      },
+      "expected_rule_ids": [
+        "LC-DEFERRED-TENOR-MISSING",
+        "LC-DEFERRED-START-EVENT-MISSING",
+        "LC-DRAFT-TENOR-TEXT-MISSING"
+      ],
+      "forbidden_rule_ids": ["LC-AVAILABILITY-MISSING"]
+    },
+    {
+      "case_id": "GOLD-LC-ACCEPTANCE-COMPLETE",
+      "description": "Acceptance L/C with explicit tenor, B/L anchor, draft wording, and accepting bank",
+      "document": {
+        "document_id": "DOC-GOLD-LC-ACCEPTANCE",
+        "evidence_id": "EVID-GOLD-LC-ACCEPTANCE",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-ACCEPTANCE",
+        "linked_transaction_ids": ["EXP-GOLD-003"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "acceptance",
+          "tenor_start_event": "bill_of_lading_date",
+          "draft_required": true,
+          "draft_tenor_text": "90 days after B/L date",
+          "acceptance_party": "issuing bank"
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-ACCEPTANCE",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-ACCEPTANCE-COMPLETE",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-ACCEPTANCE",
+        "transaction_id": "EXP-GOLD-003",
+        "method": "letter_of_credit",
+        "tenor_days": 90,
+        "issuing_bank": "Example International Bank",
+        "irrevocable": true,
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-ACCEPTANCE",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-ACCEPTANCE-COMPLETE/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "expected_rule_ids": [],
+      "forbidden_rule_ids": [
+        "LC-DEFERRED-TENOR-MISSING",
+        "LC-DEFERRED-START-EVENT-MISSING",
+        "LC-ACCEPTANCE-PARTY-MISSING",
+        "LC-DRAFT-TENOR-TEXT-MISSING"
+      ]
+    },
+    {
+      "case_id": "GOLD-LC-ACCEPTANCE-PARTY-MISSING",
+      "description": "Acceptance L/C with complete tenor but no accepting party",
+      "document": {
+        "document_id": "DOC-GOLD-LC-ACCEPTANCE-NO-PARTY",
+        "evidence_id": "EVID-GOLD-LC-ACCEPTANCE-NO-PARTY",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-ACCEPTANCE-NO-PARTY",
+        "linked_transaction_ids": ["EXP-GOLD-004"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "acceptance",
+          "tenor_start_event": "bill_of_lading_date",
+          "draft_required": true,
+          "draft_tenor_text": "60 days after B/L date",
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-ACCEPTANCE-NO-PARTY",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-ACCEPTANCE-PARTY-MISSING",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-ACCEPTANCE-NO-PARTY",
+        "transaction_id": "EXP-GOLD-004",
+        "method": "letter_of_credit",
+        "tenor_days": 60,
+        "issuing_bank": "Example International Bank",
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-ACCEPTANCE-NO-PARTY",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-ACCEPTANCE-PARTY-MISSING/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "partial"
+      },
+      "expected_rule_ids": ["LC-ACCEPTANCE-PARTY-MISSING"],
+      "forbidden_rule_ids": ["LC-DEFERRED-TENOR-MISSING"]
+    },
+    {
+      "case_id": "GOLD-LC-AVAILABILITY-MISSING",
+      "description": "L/C with no reviewed availability type",
+      "document": {
+        "document_id": "DOC-GOLD-LC-NO-AVAILABILITY",
+        "evidence_id": "EVID-GOLD-LC-NO-AVAILABILITY",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-NO-AVAILABILITY",
+        "linked_transaction_ids": ["EXP-GOLD-005"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": null,
+          "tenor_start_event": "unknown",
+          "draft_required": null,
+          "draft_tenor_text": null,
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-NO-AVAILABILITY",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-AVAILABILITY-MISSING",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "partial"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-NO-AVAILABILITY",
+        "transaction_id": "EXP-GOLD-005",
+        "method": "letter_of_credit",
+        "issuing_bank": "Example International Bank",
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-NO-AVAILABILITY",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-AVAILABILITY-MISSING/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "partial"
+      },
+      "expected_rule_ids": ["LC-AVAILABILITY-MISSING"],
+      "forbidden_rule_ids": []
+    },
+    {
+      "case_id": "GOLD-LC-BUYER-CONTROLLED-ZERO-PRESENTATION",
+      "description": "Sight L/C with zero presentation days and applicant-only certificate",
+      "document": {
+        "document_id": "DOC-GOLD-LC-BUYER-CONTROLLED",
+        "evidence_id": "EVID-GOLD-LC-BUYER-CONTROLLED",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-12-31",
+        "payment_structure_id": "PAY-GOLD-LC-BUYER-CONTROLLED",
+        "linked_transaction_ids": ["EXP-GOLD-006"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-11-30",
+          "presentation_period_days": 0,
+          "buyer_controlled_document_requirements": ["Acceptance certificate issued only by applicant"],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "sight",
+          "tenor_start_event": "unknown",
+          "draft_required": false,
+          "draft_tenor_text": null,
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-BUYER-CONTROLLED",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-BUYER-CONTROLLED-ZERO-PRESENTATION",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-BUYER-CONTROLLED",
+        "transaction_id": "EXP-GOLD-006",
+        "method": "letter_of_credit",
+        "issuing_bank": "Example International Bank",
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-BUYER-CONTROLLED",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-BUYER-CONTROLLED-ZERO-PRESENTATION/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "expected_rule_ids": [
+        "LC-PRESENTATION-PERIOD-ZERO",
+        "LC-BUYER-CONTROLLED-DOCUMENT"
+      ],
+      "forbidden_rule_ids": []
+    },
+    {
+      "case_id": "GOLD-CONTRACT-PLACE-AND-SETOFF",
+      "description": "Contract with missing named place and unilateral set-off",
+      "document": {
+        "document_id": "DOC-GOLD-CONTRACT-RISK",
+        "evidence_id": "EVID-GOLD-CONTRACT-RISK",
+        "document_type": "contract",
+        "incoterms_rule": "FCA",
+        "incoterms_year": 2020,
+        "named_place": null,
+        "payment_structure_id": "PAY-GOLD-CONTRACT-RISK",
+        "linked_transaction_ids": ["EXP-GOLD-007"],
+        "reviewed_fields": {
+          "governing_law": "Republic of Korea",
+          "dispute_resolution": "KCAB International arbitration",
+          "acceptance_period_days": 10,
+          "buyer_unilateral_setoff_right": true,
+          "buyer_unilateral_amendment_right": false
+        },
+        "source": {
+          "source_id": "SRC-GOLD-CONTRACT-RISK",
+          "source_name": "Synthetic gold contract fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-CONTRACT-PLACE-AND-SETOFF",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-CONTRACT-RISK",
+        "transaction_id": "EXP-GOLD-007",
+        "method": "open_account",
+        "tenor_days": 30,
+        "deferred_payment_percent": 100,
+        "payment_trigger": "30 days after shipment",
+        "source": {
+          "source_id": "SRC-GOLD-PAY-CONTRACT-RISK",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-CONTRACT-PLACE-AND-SETOFF/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "expected_rule_ids": [
+        "CONTRACT-INCOTERMS-PLACE-MISSING",
+        "CONTRACT-UNILATERAL-SET-OFF"
+      ],
+      "forbidden_rule_ids": ["CONTRACT-GOVERNING-LAW-MISSING"]
+    },
+    {
+      "case_id": "GOLD-LC-EXPIRY-CONFLICT",
+      "description": "L/C expiry date before latest shipment date",
+      "document": {
+        "document_id": "DOC-GOLD-LC-EXPIRY-CONFLICT",
+        "evidence_id": "EVID-GOLD-LC-EXPIRY-CONFLICT",
+        "document_type": "letter_of_credit",
+        "expiry_date": "2026-09-15",
+        "payment_structure_id": "PAY-GOLD-LC-EXPIRY-CONFLICT",
+        "linked_transaction_ids": ["EXP-GOLD-008"],
+        "reviewed_fields": {
+          "latest_shipment_date": "2026-10-01",
+          "presentation_period_days": 21,
+          "buyer_controlled_document_requirements": [],
+          "expiry_place": "Seoul, Republic of Korea",
+          "availability_type": "sight",
+          "tenor_start_event": "unknown",
+          "draft_required": false,
+          "draft_tenor_text": null,
+          "acceptance_party": null
+        },
+        "source": {
+          "source_id": "SRC-GOLD-LC-EXPIRY-CONFLICT",
+          "source_name": "Synthetic gold L/C fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-EXPIRY-CONFLICT",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "payment_structure": {
+        "payment_structure_id": "PAY-GOLD-LC-EXPIRY-CONFLICT",
+        "transaction_id": "EXP-GOLD-008",
+        "method": "letter_of_credit",
+        "issuing_bank": "Example International Bank",
+        "governing_rules": ["UCP 600"],
+        "source": {
+          "source_id": "SRC-GOLD-PAY-EXPIRY-CONFLICT",
+          "source_name": "Synthetic gold payment fixture",
+          "source_tier": "user_provided",
+          "source_kind": "user_document",
+          "source_locator": "gold://GOLD-LC-EXPIRY-CONFLICT/payment",
+          "as_of_date": "2026-07-27",
+          "effective_date_verified": true
+        },
+        "record_status": "verified"
+      },
+      "expected_rule_ids": ["LC-EXPIRY-BEFORE-SHIPMENT"],
+      "forbidden_rule_ids": []
+    }
+  ]
+}
