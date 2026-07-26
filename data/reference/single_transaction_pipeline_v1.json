@@ -1,0 +1,19 @@
+{
+  "pipeline_name": "KB TradeGuard single-transaction assessment pipeline",
+  "pipeline_version": "single-transaction-assessment/1.0",
+  "effective_date": "2026-07-26",
+  "single_transaction_case_required": true,
+  "stage_order": [
+    "trade_document_screening",
+    "document_reconciliation",
+    "transaction_capacity",
+    "product_matching",
+    "transaction_decision_brief"
+  ],
+  "authority_boundary": "The pipeline only orchestrates deterministic pre-screening components over reviewed case records. It does not approve or reject a transaction, provide legal advice, clear sanctions or AML obligations, determine bank credit or K-SURE acceptance, quote executable terms, or infer missing inputs.",
+  "limitations": [
+    "Version 1 accepts exactly one approved transaction in a case so that case-wide document and product refresh operations cannot overwrite records belonging to another transaction.",
+    "Country, counterparty, compliance, reviewed document, financial statement, FX, and explicit protection inputs must already be attached to the case or remain reported as missing.",
+    "A completed pipeline run means the deterministic stages executed or were explicitly skipped; it does not mean the transaction is complete, safe, eligible, or approved."
+  ]
+}
