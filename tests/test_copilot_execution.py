@@ -125,7 +125,7 @@ def test_unsupported_candidate_is_not_silently_executed():
     candidate = next(
         item
         for item in propose_scenarios(case).candidates
-        if item.scenario_type == "import_cost_increase"
+        if item.scenario_type == "combined_stress"
     )
     with pytest.raises(NotImplementedError, match="No governed deterministic executor"):
         _executor().execute(case, candidate, human_approved=True)
