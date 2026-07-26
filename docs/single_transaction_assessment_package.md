@@ -13,7 +13,7 @@ single reviewed UnifiedCopilotCase
 + review notes
 ```
 
-The package runner validates the cross-links, executes the deterministic pipeline, and exports audit artifacts. It does not fetch missing data, approve evidence, interpret raw documents, or make a bank, insurer, legal, sanctions, or AML decision.
+The package runner validates the cross-links, executes the deterministic pipeline, and exports machine-readable audit artifacts plus a human-readable Markdown report. It does not fetch missing data, approve evidence, interpret raw documents, or make a bank, insurer, legal, sanctions, or AML decision.
 
 ## Package model
 
@@ -124,10 +124,25 @@ updated_case.json
 updated_case_canonical.json
 assessment_result.json
 decision_brief.json
+decision_brief.md
 stage_trace.json
 audit_summary.json
 artifact_manifest.json
 ```
+
+`decision_brief.md` is a deterministic Korean review report containing:
+
+- transaction summary and final pre-screening disposition;
+- ranked concerns with factual bases and source IDs;
+- missing information;
+- selected KB and K-SURE consultation candidates;
+- consultation conditions;
+- dependency-aware action plan;
+- pipeline stage trace and case hashes;
+- evidence, calculation, product, consultation, and rule references;
+- authority boundary and limitations.
+
+The Markdown renderer uses only the completed case and assessment result. It adds no new risk conclusion or calculation. It rejects a case whose hash differs from the assessment result output hash.
 
 `artifact_manifest.json` records:
 
@@ -136,7 +151,7 @@ artifact_manifest.json
 - input and output case hashes;
 - pipeline version;
 - transaction ID;
-- SHA-256 hash of every exported artifact;
+- SHA-256 hash of every exported artifact, including the Markdown report;
 - authority boundary and limitations.
 
 Files are written atomically through a temporary file and replacement operation. The manifest is written after the other artifacts.
@@ -159,6 +174,7 @@ Before a contract, invoice, L/C, financial statement, country fact, or screening
 ```powershell
 py -3.13 -m pytest -q tests/test_single_transaction_pipeline.py
 py -3.13 -m pytest -q tests/test_single_transaction_package.py
+py -3.13 -m pytest -q tests/test_decision_brief_report.py
 py -3.13 -m pytest -q
 py -3.13 -m compileall -q app.py copilot_app.py src tests scripts
 py -3.13 -c "import app; import copilot_app; import src"
