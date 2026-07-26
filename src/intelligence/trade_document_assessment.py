@@ -8,7 +8,12 @@ from pydantic import BaseModel, Field
 
 from ..copilot_case import UnifiedCopilotCase
 from ..trade_finance_domain import ContractClauseFinding, TradeRiskSignal
-from .trade_document_rules import build_document_risk_signals, evaluate_trade_document
+from .trade_document_rules import (
+    build_document_risk_signals,
+    default_trade_document_rule_registry_path,
+    evaluate_trade_document,
+    load_trade_document_rule_registry,
+)
 
 
 class TradeDocumentScreeningOutcome(BaseModel):
@@ -26,6 +31,13 @@ def apply_trade_document_screening(
 ) -> tuple[UnifiedCopilotCase, TradeDocumentScreeningOutcome]:
     """Evaluate approved reviewed documents and attach grounded results immutably."""
 
+    resolved_path = (
+        Path(registry_path)
+        if registry_path is not None
+        else default_trade_document_rule_registry_path()
+    )
+    registry = load_trade_document_rule_registry(resolved_path)
+    registry_source_id = f"TRADE-DOCUMENT-RULES-{registry.registry_version}"
     approved_evidence_ids = {
         item.evidence_id for item in case.evidence if item.status == "approved"
     }
@@ -54,30 +66,45 @@ def apply_trade_document_screening(
         findings = evaluate_trade_document(
             document,
             payment,
-            registry_path=registry_path,
+            registry_path=resolved_path,
         )
         signals = build_document_risk_signals(
             document,
             findings,
-            registry_path=registry_path,
+            registry_path=resolved_path,
         )
         evaluated_document_ids.append(document.document_id)
         generated_findings.extend(findings)
         generated_signals.extend(signals)
 
-    existing_findings = {
-        item.clause_finding_id: item for item in case.trade_finance.clause_findings
+    evaluated = set(evaluated_document_ids)
+    retained_findings = [
+        item
+        for item in case.trade_finance.clause_findings
+        if not (
+            item.source.source_id == registry_source_id
+            and item.document_id in evaluated
+        )
+    ]
+    retained_signals = [
+        item
+        for item in case.trade_finance.risk_signals
+        if not (
+            item.source.source_id == registry_source_id
+            and bool(set(item.affected_document_ids) & evaluated)
+        )
+    ]
+    current_findings = {
+        item.clause_finding_id: item for item in retained_findings + generated_findings
     }
-    existing_findings.update(
-        {item.clause_finding_id: item for item in generated_findings}
-    )
-    existing_signals = {item.signal_id: item for item in case.trade_finance.risk_signals}
-    existing_signals.update({item.signal_id: item for item in generated_signals})
+    current_signals = {
+        item.signal_id: item for item in retained_signals + generated_signals
+    }
 
     updated_domain = case.trade_finance.model_copy(
         update={
-            "clause_findings": list(existing_findings.values()),
-            "risk_signals": list(existing_signals.values()),
+            "clause_findings": list(current_findings.values()),
+            "risk_signals": list(current_signals.values()),
         }
     )
     updated_case = case.model_copy(update={"trade_finance": updated_domain})
