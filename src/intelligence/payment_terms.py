@@ -74,7 +74,9 @@ class NormalizedPaymentTerms(BaseModel):
         }
         if self.availability_type == "sight" and self.tenor_days not in {None, 0}:
             raise ValueError("Sight terms cannot carry a positive tenor_days value")
-        if deferred and self.tenor_days is None and "tenor_days" not in self.unresolved_fields:
+        if deferred and self.tenor_days is None and "tenor_days" not in " ".join(
+            self.unresolved_fields
+        ):
             raise ValueError("Deferred or acceptance terms must preserve missing tenor_days")
         if self.draft_required is False and self.draft_tenor_text:
             raise ValueError("draft_tenor_text cannot be set when draft_required is false")
@@ -117,19 +119,44 @@ class NormalizedPaymentTerms(BaseModel):
 
 
 _INSTRUMENT_PATTERNS: list[tuple[PaymentInstrument, tuple[str, ...]]] = [
-    ("standby_letter_of_credit", (r"\bstandby\s+(?:letter\s+of\s+credit|l/?c)\b", r"\bsblc\b")),
-    ("documentary_collection_dp", (r"\bd\s*/\s*p\b", r"documents?\s+against\s+payment", r"cash\s+against\s+documents?")),
-    ("documentary_collection_da", (r"\bd\s*/\s*a\b", r"documents?\s+against\s+acceptance")),
-    ("letter_of_credit", (r"\bl\s*/\s*c\b", r"letter\s+of\s+credit", r"documentary\s+credit")),
+    (
+        "standby_letter_of_credit",
+        (r"\bstandby\s+(?:letter\s+of\s+credit|l/?c)\b", r"\bsblc\b"),
+    ),
+    (
+        "documentary_collection_dp",
+        (
+            r"\bd\s*/\s*p\b",
+            r"documents?\s+against\s+payment",
+            r"cash\s+against\s+documents?",
+        ),
+    ),
+    (
+        "documentary_collection_da",
+        (r"\bd\s*/\s*a\b", r"documents?\s+against\s+acceptance"),
+    ),
+    (
+        "letter_of_credit",
+        (r"\bl\s*/\s*c\b", r"letter\s+of\s+credit", r"documentary\s+credit"),
+    ),
     ("open_account", (r"\bo\s*/\s*a\b", r"open\s+account")),
-    ("advance_payment", (r"advance\s+payment", r"payment\s+in\s+advance", r"cash\s+in\s+advance")),
+    (
+        "advance_payment",
+        (r"advance\s+payment", r"payment\s+in\s+advance", r"cash\s+in\s+advance"),
+    ),
 ]
 
 _START_EVENT_PATTERNS: list[tuple[TenorStartEvent, tuple[str, ...]]] = [
-    ("bill_of_lading_date", (r"b\s*/\s*l(?:\s+date)?", r"bill\s+of\s+lading(?:\s+date)?")),
+    (
+        "bill_of_lading_date",
+        (r"b\s*/\s*l(?:\s+date)?", r"bill\s+of\s+lading(?:\s+date)?"),
+    ),
     ("shipment_date", (r"shipment(?:\s+date)?", r"date\s+of\s+shipment")),
     ("invoice_date", (r"invoice(?:\s+date)?",)),
-    ("document_presentation", (r"presentation(?:\s+date)?", r"documents?\s+presented")),
+    (
+        "document_presentation",
+        (r"presentation(?:\s+date)?", r"documents?\s+presented"),
+    ),
     ("acceptance", (r"acceptance(?:\s+date)?",)),
     ("sight", (r"after\s+sight", r"from\s+sight")),
 ]
@@ -154,11 +181,19 @@ def _instrument(text: str) -> tuple[PaymentInstrument, list[str]]:
     return "other", []
 
 
-def _availability(text: str, instrument: PaymentInstrument) -> tuple[AvailabilityType, list[str]]:
+def _availability(
+    text: str, instrument: PaymentInstrument
+) -> tuple[AvailabilityType, list[str]]:
+    if instrument == "documentary_collection_da":
+        return "acceptance", ["availability:derived_from_documentary_collection_da"]
+
     patterns: list[tuple[AvailabilityType, tuple[str, ...]]] = [
         ("deferred_payment", (r"deferred\s+payment",)),
         ("negotiation", (r"available\s+by\s+negotiation", r"negotiation")),
-        ("usance", (r"\busance\b", r"\d+\s*(?:calendar\s+)?days?\s+(?:after|from)\b")),
+        (
+            "usance",
+            (r"\busance\b", r"\d+\s*(?:calendar\s+)?days?\s+(?:after|from)\b"),
+        ),
         ("acceptance", (r"available\s+by\s+acceptance", r"\bacceptance\b")),
         ("sight", (r"at\s+sight", r"sight\s+payment", r"available\s+by\s+payment")),
     ]
@@ -166,8 +201,6 @@ def _availability(text: str, instrument: PaymentInstrument) -> tuple[Availabilit
         matched = _first_match(text, candidates)
         if matched:
             return availability, [f"availability:{matched}"]
-    if instrument == "documentary_collection_da":
-        return "acceptance", ["availability:derived_from_documentary_collection_da"]
     return "unknown", []
 
 
@@ -183,7 +216,12 @@ def _tenor(text: str) -> tuple[int | None, TenorStartEvent, str | None, list[str
     if not match:
         simple = re.search(r"(?P<days>\d{1,4})\s*(?:calendar\s+)?days?", text)
         if simple:
-            return int(simple.group("days")), "unknown", simple.group(0), ["tenor:days_without_start_event"]
+            return (
+                int(simple.group("days")),
+                "unknown",
+                simple.group(0),
+                ["tenor:days_without_start_event"],
+            )
         return None, "unknown", None, []
 
     anchor = match.group("anchor")
@@ -238,14 +276,22 @@ def normalize_payment_terms(reviewed_text: str) -> NormalizedPaymentTerms:
     if instrument == "other":
         unresolved.append("instrument: no supported payment instrument was identified")
     if availability == "unknown":
-        unresolved.append("availability_type: sight, usance, deferred payment, acceptance, or negotiation is not explicit")
+        unresolved.append(
+            "availability_type: sight, usance, deferred payment, acceptance, or negotiation is not explicit"
+        )
     if availability in {"usance", "deferred_payment", "acceptance"}:
         if tenor_days is None:
-            unresolved.append("tenor_days: deferred or acceptance timing lacks an explicit day count")
+            unresolved.append(
+                "tenor_days: deferred or acceptance timing lacks an explicit day count"
+            )
         if start_event == "unknown":
-            unresolved.append("tenor_start_event: deferred or acceptance timing lacks an explicit start event")
+            unresolved.append(
+                "tenor_start_event: deferred or acceptance timing lacks an explicit start event"
+            )
     if availability == "acceptance" and not party:
-        unresolved.append("acceptance_party: the party expected to accept the draft is not explicit")
+        unresolved.append(
+            "acceptance_party: the party expected to accept the draft is not explicit"
+        )
     if draft_required and not tenor_text and availability != "sight":
         unresolved.append("draft_tenor_text: required draft timing is not explicit")
 
