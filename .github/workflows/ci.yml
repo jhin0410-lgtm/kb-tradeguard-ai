@@ -42,5 +42,5 @@ jobs:
           retention-days: 7
       - run: python scripts/competition_readiness_check.py
       - run: python -m pytest -q
-      - run: python -m compileall -q app.py copilot_app.py assessment_app.py pages src tests scripts
-      - run: python -c "import app; import copilot_app; import assessment_app; import src"
+      - run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py pages src tests scripts
+      - run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import src"
