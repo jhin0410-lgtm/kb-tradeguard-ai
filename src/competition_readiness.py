@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .assessment_app_presentation import build_presentation_snapshot, scenario_narrative
+from .assessment_app_v2 import build_presentation_snapshot_v2
 from .demo_scenarios import list_demo_scenarios, load_demo_scenario
 from .intelligence.single_transaction_package import run_single_transaction_package
 from .intelligence.trade_document_gold import (
@@ -32,10 +33,13 @@ _REQUIRED_FILES = [
     "README.md",
     "SECURITY.md",
     "assessment_app.py",
+    "assessment_app_v2.py",
     "requirements.txt",
+    "run-mobile-demo.ps1",
     "docs/assessment_demo_app.md",
     "docs/competition_demo_script.md",
     "docs/trade_document_gold_dataset.md",
+    "docs/ui_v2_mobile.md",
     "data/gold/trade_document_gold_v1.json",
     "data/reference/trade_document_rules_v1.json",
     "scripts/public_repo_safety_check.py",
@@ -75,7 +79,8 @@ def build_competition_readiness_report() -> dict[str, Any]:
         run = run_single_transaction_package(package)
         actual_disposition = run.assessment_result.brief.disposition
         narrative = scenario_narrative(metadata.scenario_id)
-        snapshot = build_presentation_snapshot(run, scenario_id=metadata.scenario_id)
+        snapshot_v1 = build_presentation_snapshot(run, scenario_id=metadata.scenario_id)
+        snapshot_v2 = build_presentation_snapshot_v2(run, scenario_id=metadata.scenario_id)
         matches = actual_disposition == metadata.expected_disposition
         if not matches:
             failures.append(
@@ -84,6 +89,10 @@ def build_competition_readiness_report() -> dict[str, Any]:
         if narrative is None:
             failures.append(
                 f"Scenario {metadata.scenario_id} has no presentation narrative"
+            )
+        if snapshot_v2["view_contract"] != "risk_first_60_second_brief":
+            failures.append(
+                f"Scenario {metadata.scenario_id} has an invalid V2 presentation contract"
             )
         scenario_results.append(
             {
@@ -94,12 +103,14 @@ def build_competition_readiness_report() -> dict[str, Any]:
                 "input_package_hash": run.input_package_hash,
                 "output_case_hash": run.output_case_hash,
                 "stage_count": len(run.assessment_result.stage_traces),
-                "presentation_snapshot_version": snapshot["snapshot_version"],
+                "presentation_snapshot_version": snapshot_v1["snapshot_version"],
+                "presentation_snapshot_v2_version": snapshot_v2["snapshot_version"],
+                "presentation_v2_top_risk_count": len(snapshot_v2["top_risks"]),
             }
         )
 
     return {
-        "report_version": "competition-readiness/1.1",
+        "report_version": "competition-readiness/1.2",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
         "required_file_count": len(_REQUIRED_FILES),
