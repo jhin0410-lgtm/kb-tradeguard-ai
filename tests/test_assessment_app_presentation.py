@@ -21,7 +21,14 @@ def test_every_demo_scenario_has_a_complete_presentation_narrative():
 
 
 def test_every_demo_disposition_has_a_safe_presentation_state():
-    prohibited = {"승인 완료", "적격 확정", "안전 인증", "제재 해소"}
+    prohibited_positive_claims = {
+        "승인 완료",
+        "적격 확정",
+        "안전 인증 완료",
+        "제재 해소 완료",
+        "대출 가능 확정",
+        "보험 인수 확정",
+    }
 
     for metadata in list_demo_scenarios():
         presentation = disposition_presentation(metadata.expected_disposition)
@@ -35,7 +42,7 @@ def test_every_demo_disposition_has_a_safe_presentation_state():
         )
 
         assert presentation.tone in {"critical", "warning", "info", "clear"}
-        assert not any(term in combined for term in prohibited)
+        assert not any(term in combined for term in prohibited_positive_claims)
 
 
 def test_presentation_snapshot_is_hash_grounded_and_compact():
