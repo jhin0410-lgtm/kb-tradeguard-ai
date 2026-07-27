@@ -148,7 +148,7 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    for key in ("KCS_TRADE_API_KEY", "DATA_GO_KR_SERVICE_KEY"):
+    for key in ("KEXIM_API_KEY", "KCS_TRADE_API_KEY", "DATA_GO_KR_SERVICE_KEY"):
         _secret_to_environment(key)
     page = st.Page(
         _render_competition_page,
