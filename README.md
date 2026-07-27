@@ -6,6 +6,36 @@
 
 이 저장소는 Python 3.11+ 기반 공모전 프로토타입입니다. 핵심 판단은 결정론적 룰·계산·검증된 입력이 담당하며, AI는 선택형 설명 계층으로만 배치됩니다.
 
+## 공모전 공개 데모
+
+공개 데모의 기본 진입점은 `streamlit_app.py`이며 실제 화면은 `competition_app.py`가 담당합니다.
+
+```powershell
+py -3.13 -m pip install -r requirements.txt
+py -3.13 -m streamlit run competition_app.py
+```
+
+공개 데모 특징:
+
+- `O/A 90일 고위험 수출` 합성 시나리오 자동 실행
+- 판정, 상위 위험 3개, 다음 행동 3개를 첫 화면에 표시
+- 위험 카드의 `판단 근거 열기`에서 근거 ID와 원천 레코드 확인
+- 모바일 하단 고정 메뉴: `요약 | 근거 | 실행 | 감사`
+- 22개 Rule, 30개 Gold Case, 150개 Mutation, 4개 대표 시나리오 검증 현황
+- 발표용 HTML과 감사 JSON Snapshot
+- 설정된 공개 HTTPS 주소를 로컬에서 QR로 생성
+- 업로드, Live AI, API Key 입력, 고객정보 저장 기능 제외
+
+유용한 URL 모드:
+
+```text
+?demo=1
+?scenario=oa_high_risk
+?presentation=1
+```
+
+`presentation=1`은 시나리오 조작·감사 다운로드·QR 안내를 숨기고 판정, 상위 위험, 다음 행동만 표시합니다.
+
 ## 핵심 문제
 
 중소 수출입기업은 신규 바이어 거래를 검토할 때 다음 정보를 서로 다른 문서와 기관에 나누어 확인해야 합니다.
@@ -17,44 +47,7 @@
 - 무역금융·보험·보증 상담 후보와 준비서류
 - 누가 무엇을 먼저 확인해야 하는지에 대한 실행 순서
 
-KB TradeGuard AI는 이 정보를 하나의 `Decision Brief`, 근거 ID, 의존형 Action Plan, 감사 패키지로 연결합니다.
-
-## Product UI V2
-
-공모전의 기본 실행 화면은 `assessment_app_v2.py`입니다.
-
-```powershell
-py -3.13 -m pip install -r requirements.txt
-py -3.13 -m streamlit run assessment_app_v2.py
-```
-
-V2 목표:
-
-- **60초 제품 화면**: disposition, 상위 위험 3개, 다음 행동 3개를 상세 표보다 먼저 표시
-- **위험 중심 Summary**: 불투명한 총점 없이 심각도·사실 근거·미확인 사실·Reference ID 유지
-- **Evidence Drawer**: 위험 문장에서 RiskSignal·Evidence·Calculation·CountryFact·문서 레코드까지 추적
-- **Mobile compact mode**: 반응형 CSS와 휴대폰·발표용 4탭 정보구조
-- **발표 Snapshot V2**: 상위 위험·행동·Stage·Case hash를 담은 오프라인 HTML 및 JSON
-
-대표 데모는 `O/A 90일 고위험 수출` 시나리오입니다. 입력은 합성 대표 시나리오 또는 `single-transaction-package/1.0` JSON Package를 사용하며, 누락값을 자동 보정하거나 추정하지 않습니다.
-
-## 휴대폰 연결
-
-PC와 휴대폰을 같은 Wi-Fi에 연결한 뒤 다음 명령을 실행합니다.
-
-```powershell
-.\run-mobile-demo.ps1
-```
-
-스크립트가 다음 형식의 접속주소를 출력합니다.
-
-```text
-http://<PC IPv4>:8501/?view=compact
-```
-
-공개 URL로 배포한 경우에도 URL 뒤에 `?view=compact`를 붙이면 휴대폰용 화면이 기본 선택됩니다. 브라우저의 홈 화면 추가 기능은 사용할 수 있지만, 이는 네이티브 Android·iOS 앱이 아니라 반응형 웹앱입니다. 상세 연결·배포·보안 경계는 `docs/ui_v2_mobile.md`에 정리했습니다.
-
-실제 고객자료, 원본 계약·송장·L/C, API Key는 로컬 LAN 또는 공개 데모에 입력하지 않습니다.
+KB TradeGuard AI는 이 정보를 하나의 거래 검토 요약, 근거 ID, 의존형 Action Plan, 감사 패키지로 연결합니다.
 
 ## 결정론적 5단계 파이프라인
 
@@ -68,6 +61,68 @@ http://<PC IPv4>:8501/?view=compact
 ```
 
 각 단계는 생성 레코드 ID와 실행 상태를 `Stage Trace`에 남깁니다. 동일한 Package는 동일한 정규화 입력과 결정론적 결과를 생성하도록 설계했습니다.
+
+## 제품 UI 계층
+
+### 단일 화면 공개 데모
+
+```powershell
+py -3.13 -m streamlit run competition_app.py
+```
+
+합성 시나리오 전용이며 개발용 페이지와 업로드 기능을 노출하지 않습니다.
+
+### Product UI V2
+
+```powershell
+py -3.13 -m streamlit run assessment_app_v2.py
+```
+
+60초 제품 화면과 상세 검토 화면을 전환할 수 있습니다.
+
+### 모바일 전용 V2
+
+```powershell
+py -3.13 -m streamlit run assessment_app_v2_mobile.py
+```
+
+모바일 Hero, 메인 실행 버튼, 압축된 2×2 시연 흐름을 제공합니다.
+
+### 기존 상세 사전진단 UI
+
+```powershell
+py -3.13 -m streamlit run assessment_app.py
+```
+
+JSON Package 업로드, Human Review Overlay, 상세 다운로드와 선택형 Live AI를 포함한 개발·검토용 화면입니다.
+
+## 휴대폰 연결
+
+PC와 휴대폰을 같은 Wi-Fi에 연결한 뒤 실행합니다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-mobile-demo.ps1
+```
+
+출력 예시:
+
+```text
+http://<PC IPv4>:8501/?demo=1
+```
+
+스크립트는 `competition_app.py`를 실행하고 로컬 주소를 QR 대상 주소로 설정합니다. 실제 고객자료, 원본 계약·송장·L/C, API Key는 로컬 LAN 또는 공개 데모에 입력하지 않습니다.
+
+## 공개 HTTPS 배포와 QR
+
+배포 앱 파일은 `streamlit_app.py`로 지정합니다. 배포 환경의 Secret 또는 환경변수에 공개 URL을 설정합니다.
+
+```text
+TRADEGUARD_PUBLIC_DEMO_URL=https://your-app-name.streamlit.app/
+```
+
+QR은 외부 QR 서비스가 아니라 애플리케이션 내부에서 생성됩니다. 공개 URL은 HTTP(S) 절대주소만 허용합니다.
+
+상세 내용은 `docs/public_competition_demo.md`와 `docs/ui_v2_mobile.md`를 참고하십시오.
 
 ## 신뢰 경계
 
@@ -91,7 +146,7 @@ http://<PC IPv4>:8501/?view=compact
 
 ### 선택형 Grounded Live AI
 
-Live AI는 기본 OFF입니다. 설정된 경우에도 완료된 결정론적 결과만 설명하며 다음을 수행하지 않습니다.
+Live AI는 기본 OFF이며 공개 공모전 앱에서는 노출하지 않습니다. 상세 검토 앱에서 설정된 경우에도 완료된 결정론적 결과만 설명하며 다음을 수행하지 않습니다.
 
 - 거래 승인·거절
 - 계산 또는 Finding 변경
@@ -100,8 +155,6 @@ Live AI는 기본 OFF입니다. 설정된 경우에도 완료된 결정론적 �
 - KB 신용승인 또는 K-SURE 인수판정
 - 금리·한도·실행조건 확정
 - 누락정보 추정
-
-모델 응답은 허용된 `[REF:ID]`만 사용할 수 있고, 로컬 검증에 실패하면 화면에 신뢰 결과로 표시되지 않습니다. 외부 API가 없어도 전체 분석·보고서·다운로드는 독립 실행됩니다.
 
 ## Gold Dataset과 공격 테스트
 
@@ -114,8 +167,6 @@ Live AI는 기본 OFF입니다. 설정된 경우에도 완료된 결정론적 �
 - 정상 입력 Negative Control
 - 복합 독소계약·복합 고위험 L/C
 - 의미를 보존하는 자동 Mutation 150개
-
-Mutation은 ID 재명명, 거래 재연결, Source metadata 변경, 상태 변경, 무관 필드 삽입이 Rule 결과를 바꾸지 않는지 검사합니다.
 
 ```powershell
 py -3.13 -m pytest -q tests/test_trade_document_gold_dataset.py
@@ -137,25 +188,13 @@ stage_trace.json
 audit_summary.json
 artifact_manifest.json
 competition-presentation-snapshot.json
-kb-tradeguard-presentation-snapshot-v2.html
-kb-tradeguard-presentation-snapshot-v2.json
+kb-tradeguard-competition-snapshot.html
+kb-tradeguard-competition-snapshot.json
 ```
 
 입력 Package hash, 입력 Case hash, 출력 Case hash와 파일별 SHA-256을 함께 보존합니다. Hash는 변경 추적 식별자이며 결과의 법적·업무적 정확성을 보증하지 않습니다.
 
-## 전체 실행 진입점
-
-### Product UI V2
-
-```powershell
-py -3.13 -m streamlit run assessment_app_v2.py
-```
-
-### 기존 상세 사전진단 UI
-
-```powershell
-py -3.13 -m streamlit run assessment_app.py
-```
+## 기타 실행 진입점
 
 ### Global Trade Copilot workspace
 
@@ -175,14 +214,15 @@ py -3.13 -m streamlit run app.py
 py -3.13 scripts/public_repo_safety_check.py
 py -3.13 scripts/competition_readiness_check.py
 py -3.13 -m pytest -q
-py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py pages src tests scripts
-py -3.13 -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import src"
+py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+py -3.13 -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
 ```
 
 검증 스크립트는 네트워크 호출 없이 다음을 확인합니다.
 
 - 공개 저장소에 포함되면 안 되는 경로와 credential-shaped text
 - 필수 제출·데모·공개운영 파일 존재
+- 공개 데모가 합성 시나리오 전용인지 여부
 - 대표 시나리오 4개의 예상 disposition 유지
 - Presentation Snapshot V1·V2 생성
 - Gold Case 30개와 Mutation 150개 구성
@@ -192,9 +232,10 @@ Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는
 
 ## 발표·제출 문서
 
+- `docs/public_competition_demo.md`: 공개 단일 화면·배포·QR·발표 모드
 - `docs/competition_demo_script.md`: 3분 발표 동선과 발표 문장
 - `docs/submission_checklist.md`: 캡처·제출 파일·금지 표현 점검
-- `docs/assessment_demo_app.md`: 기존 데모 앱 입력·화면·Live AI 경계
+- `docs/assessment_demo_app.md`: 상세 데모 앱 입력·화면·Live AI 경계
 - `docs/ui_v2_mobile.md`: Product UI V2·휴대폰 연결·배포 경계
 - `docs/trade_document_gold_dataset.md`: Gold Dataset과 Mutation 설계
 - `docs/competition_hardening_and_live_ai.md`: 검증 및 Live AI 아키텍처
@@ -206,8 +247,6 @@ Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는
 - CI는 `contents: read` 최소 권한으로 실행되며 checkout credential을 보존하지 않습니다.
 - 보안 문제는 공개 Issue에 credential이나 원문서를 첨부하지 말고 `SECURITY.md` 절차를 따릅니다.
 - 기관명과 공개자료 링크는 출처 식별 목적이며 제휴·승인·공식 연동을 의미하지 않습니다.
-
-상세 권한·데이터·상표 경계는 `NOTICE.md`를 참고하십시오.
 
 ## 비목표와 제한
 
