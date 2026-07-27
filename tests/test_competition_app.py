@@ -49,8 +49,11 @@ def test_streamlit_entrypoint_isolates_legacy_pages_and_surfaces_topic_six_capab
     source = Path(streamlit_app.__file__).read_text(encoding="utf-8")
 
     assert "st.navigation([page], position=\"hidden\")" in source
+    assert "render_ai_boundary_section" in source
     assert "render_product_consultation_section" in source
     assert "render_official_data_section" in source
+    assert "build_internal_trade_document_benchmark" in source
+    assert "#ai" in source
     assert "#products" in source
     assert "#data" in source
     assert "pages/" in source
