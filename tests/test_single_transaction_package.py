@@ -208,7 +208,8 @@ def test_export_writes_hashed_audit_artifacts(tmp_path):
         encoding="utf-8"
     )
     assert "# KB TradeGuard 단일 거래 사전진단 보고서" in markdown
-    assert "## 4. 부족한 정보" in markdown
+    assert "부족한 정보" in markdown
+    assert "Finding 전문가 검토" in markdown
     assert run.output_case_hash in markdown
     assert "거래 승인·거절" in markdown
 
