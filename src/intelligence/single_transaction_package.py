@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import tempfile
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Literal
 
@@ -55,6 +56,17 @@ def _is_sha256(value: str) -> bool:
     return len(value) == 64 and all(character in "0123456789abcdef" for character in value)
 
 
+def _positive_transaction_amount(transaction: dict[str, Any]) -> Decimal:
+    raw = transaction.get("amount_fc")
+    try:
+        amount = Decimal(str(raw))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError("Package transaction amount_fc must be numeric") from exc
+    if not amount.is_finite() or amount <= 0:
+        raise ValueError("Package transaction amount_fc must be finite and greater than zero")
+    return amount
+
+
 class SingleTransactionAssessmentPackage(BaseModel):
     """Portable reviewed input package for one deterministic assessment run."""
 
@@ -86,6 +98,7 @@ class SingleTransactionAssessmentPackage(BaseModel):
             raise ValueError(
                 "Package case must contain exactly the pipeline request transaction"
             )
+        _positive_transaction_amount(self.case.approved_transactions[0])
         if (
             self.expected_input_case_hash is not None
             and self.expected_input_case_hash != self.case.case_hash
