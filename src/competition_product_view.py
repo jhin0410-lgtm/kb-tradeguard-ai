@@ -35,6 +35,17 @@ _STATUS_PRIORITY = {
     "blocked": 2,
     "not_applicable": 3,
 }
+_CATEGORY_PRIORITY = {
+    "foreign_exchange_hedging": 0,
+    "working_capital": 1,
+    "trade_credit_insurance": 2,
+    "buyer_credit_investigation": 3,
+    "receivables_financing": 4,
+    "export_guarantee_pre_shipment": 5,
+    "export_guarantee_post_shipment": 6,
+    "import_finance": 7,
+    "other": 8,
+}
 
 PRODUCT_VIEW_CSS = """
 <style>
@@ -93,6 +104,8 @@ def build_product_consultation_cards(run, *, limit: int = 4) -> list[ProductCons
     indexed.sort(
         key=lambda pair: (
             _STATUS_PRIORITY.get(pair[1].candidate_status, 99),
+            _CATEGORY_PRIORITY.get(pair[1].product_category, 99),
+            0 if pair[1].provider == "KB Kookmin Bank" else 1,
             pair[0],
         )
     )
