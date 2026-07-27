@@ -13,8 +13,10 @@ def test_public_repo_safety_accepts_placeholder_configuration(tmp_path: Path):
 
     report = build_public_repo_safety_report(tmp_path)
 
+    assert report["report_version"] == "public-repo-safety/1.1"
     assert report["status"] == "safe"
     assert report["finding_count"] == 0
+    assert report["text_scanned_file_count"] == 2
 
 
 def test_public_repo_safety_flags_secret_shaped_text(tmp_path: Path):
@@ -30,6 +32,37 @@ def test_public_repo_safety_flags_secret_shaped_text(tmp_path: Path):
     assert any(
         item["reason"] == "openai_api_key" for item in report["findings"]
     )
+
+
+def test_public_repo_safety_scans_shell_notebooks_xml_and_env_examples(tmp_path: Path):
+    secrets = {
+        "deploy.sh": "TOKEN=" + "ghp_" + "A" * 24,
+        "analysis.ipynb": '"api_key": "' + "AIza" + "A" * 35 + '"',
+        "settings.xml": "<key>" + "AKIA" + "A" * 16 + "</key>",
+        ".env.example": "OPENAI_API_KEY=" + "sk-" + "B" * 32,
+    }
+    for filename, text in secrets.items():
+        (tmp_path / filename).write_text(text, encoding="utf-8")
+
+    report = build_public_repo_safety_report(tmp_path)
+
+    flagged_paths = {
+        item["path"]
+        for item in report["findings"]
+        if item["kind"] == "credential_pattern"
+    }
+    assert flagged_paths == set(secrets)
+    assert report["text_scanned_file_count"] == len(secrets)
+
+
+def test_public_repo_safety_skips_binary_content_without_crashing(tmp_path: Path):
+    (tmp_path / "image.bin").write_bytes(b"\x89PNG\r\n\x1a\n\x00" + b"sk-" + b"A" * 32)
+
+    report = build_public_repo_safety_report(tmp_path)
+
+    assert report["status"] == "safe"
+    assert report["scanned_file_count"] == 1
+    assert report["text_scanned_file_count"] == 0
 
 
 def test_public_repo_safety_flags_private_paths(tmp_path: Path):
