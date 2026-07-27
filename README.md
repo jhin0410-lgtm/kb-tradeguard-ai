@@ -147,19 +147,23 @@ py -3.13 -m streamlit run app.py
 ## 검증
 
 ```powershell
-py -3.13 -m pytest -q
-py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py src tests scripts
-py -3.13 -c "import app; import copilot_app; import assessment_app; import src"
+py -3.13 scripts/public_repo_safety_check.py
 py -3.13 scripts/competition_readiness_check.py
+py -3.13 -m pytest -q
+py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py pages src tests scripts
+py -3.13 -c "import app; import copilot_app; import assessment_app; import src"
 ```
 
-`competition_readiness_check.py`는 네트워크 호출 없이 다음을 확인합니다.
+검증 스크립트는 네트워크 호출 없이 다음을 확인합니다.
 
-- 필수 제출·데모 파일 존재
+- 공개 저장소에 포함되면 안 되는 경로와 credential-shaped text
+- 필수 제출·데모·공개운영 파일 존재
 - 대표 시나리오 4개의 예상 disposition 유지
 - Presentation Snapshot 생성
 - Gold Case 30개와 Mutation 150개 구성
 - Rule Registry 22개 전체 Coverage
+
+Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는 외부 시스템에 비밀정보가 없음을 보증하지는 않습니다. 노출된 credential은 파일 삭제와 별개로 발급기관에서 즉시 폐기·회전해야 합니다.
 
 ## 발표·제출 문서
 
@@ -168,6 +172,16 @@ py -3.13 scripts/competition_readiness_check.py
 - `docs/assessment_demo_app.md`: 데모 앱 입력·화면·Live AI 경계
 - `docs/trade_document_gold_dataset.md`: Gold Dataset과 Mutation 설계
 - `docs/competition_hardening_and_live_ai.md`: 검증 및 Live AI 아키텍처
+
+## 공개 저장소 운영
+
+- 실제 고객·바이어·직원·개인정보와 원본 계약·송장·L/C·재무자료를 커밋하지 않습니다.
+- `.env`, Streamlit secrets, API key, service-account 파일, 인증서와 로컬 데이터 디렉터리는 `.gitignore`로 차단합니다.
+- CI는 `contents: read` 최소 권한으로 실행되며 checkout credential을 보존하지 않습니다.
+- 보안 문제는 공개 Issue에 credential이나 원문서를 첨부하지 말고 `SECURITY.md` 절차를 따릅니다.
+- 기관명과 공개자료 링크는 출처 식별 목적이며 제휴·승인·공식 연동을 의미하지 않습니다.
+
+상세 권한·데이터·상표 경계는 `NOTICE.md`를 참고하십시오.
 
 ## 비목표와 제한
 
@@ -182,3 +196,9 @@ py -3.13 scripts/competition_readiness_check.py
 - 자동 거래 실행 또는 업무 차단
 
 모든 결과는 사전검사와 상담 준비를 위한 보조정보이며, 실제 거래 확정에는 은행·보험기관·법무·물류·컴플라이언스 담당자의 확인이 필요합니다.
+
+## 라이선스와 보안
+
+원본 코드와 프로젝트 작성 문서는 별도 표기가 없는 한 `LICENSE`의 MIT License를 따릅니다. 제3자 상표·출판물·데이터의 권리는 각 권리자에게 있으며, 상세 고지사항은 `NOTICE.md`에 정리되어 있습니다.
+
+취약점 또는 실수로 노출된 비밀정보는 공개 Issue에 게시하지 말고 `SECURITY.md`의 신고·회전 절차를 따르십시오.
