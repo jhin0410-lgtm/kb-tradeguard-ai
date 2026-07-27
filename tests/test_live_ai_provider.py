@@ -46,7 +46,19 @@ def _request() -> GroundedLiveAiRequest:
             "brief": {
                 "disposition": "additional_information_required",
                 "missing_information": ["reviewed_trade_document"],
-            }
+            },
+            "reference_records": {
+                "RISK-001": {
+                    "signal_id": "RISK-001",
+                    "title": "Reviewed trade document is missing",
+                    "severity": "high",
+                },
+                "ACTION-001": {
+                    "action_id": "ACTION-001",
+                    "title": "Provide a reviewed trade document",
+                    "status": "proposed",
+                },
+            },
         },
     )
 
