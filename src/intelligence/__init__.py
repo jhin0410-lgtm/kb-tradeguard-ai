@@ -33,6 +33,14 @@ from .live_ai_contract import (
     build_live_ai_grounding_packet,
     validate_grounded_live_ai_response,
 )
+from .live_ai_provider import (
+    GroundedLiveAiExecution,
+    GroundedLiveAiProviderPayload,
+    LiveAiProviderError,
+    OpenAiLiveAiSettings,
+    openai_live_ai_is_configured,
+    run_grounded_openai_live_ai,
+)
 from .payment_terms import NormalizedPaymentTerms, normalize_payment_terms
 from .product_matching import (
     ProductMatchingOutcome,
@@ -96,10 +104,14 @@ __all__ = [
     "FinancialTrendResult",
     "FindingReviewOutcome",
     "FindingReviewSummary",
+    "GroundedLiveAiExecution",
+    "GroundedLiveAiProviderPayload",
     "GroundedLiveAiRequest",
     "GroundedLiveAiResponse",
     "GroundedLiveAiValidation",
+    "LiveAiProviderError",
     "NormalizedPaymentTerms",
+    "OpenAiLiveAiSettings",
     "PipelineStageTrace",
     "ProductMatchingOutcome",
     "ProductMatchingResult",
@@ -149,9 +161,11 @@ __all__ = [
     "load_transaction_decision_brief_registry",
     "match_trade_finance_products",
     "normalize_payment_terms",
+    "openai_live_ai_is_configured",
     "reconcile_trade_documents",
     "render_single_transaction_assessment_markdown",
     "reviewed_terms_from_document",
+    "run_grounded_openai_live_ai",
     "run_single_transaction_assessment",
     "run_single_transaction_package",
     "validate_grounded_live_ai_response",
