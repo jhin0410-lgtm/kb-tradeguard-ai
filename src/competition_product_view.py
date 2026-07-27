@@ -125,7 +125,7 @@ def render_product_consultation_section(run, *, presentation_mode: bool) -> None
     st.markdown(PRODUCT_VIEW_CSS, unsafe_allow_html=True)
     st.markdown('<div id="products" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">04 · 금융·보험·보증 상담 후보</div>',
+        '<div class="tg-section-title">05 · 금융·보험·보증 상담 후보</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
