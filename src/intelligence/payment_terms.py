@@ -161,6 +161,16 @@ _START_EVENT_PATTERNS: list[tuple[TenorStartEvent, tuple[str, ...]]] = [
     ("sight", (r"after\s+sight", r"from\s+sight")),
 ]
 
+_DEFERRED_AVAILABILITY = {"usance", "deferred_payment", "acceptance"}
+_SIMPLE_TENOR_CONTEXT_PATTERNS = (
+    r"(?:\busance\b|deferred\s+payment|available\s+by\s+acceptance|"
+    r"\btenor\b|\bmaturity\b|\bpayable\b|\bdraft\b)"
+    r"[^.;,\n]{0,80}?(?P<days>\d{1,4})\s*(?:calendar\s+)?days?",
+    r"(?P<days>\d{1,4})\s*(?:calendar\s+)?days?"
+    r"[^.;,\n]{0,40}?(?:\busance\b|deferred\s+payment|\btenor\b|"
+    r"\bmaturity\b|\bpayable\b|\bdraft\b)",
+)
+
 
 def _normalize_text(value: str) -> str:
     return " ".join(value.casefold().replace("–", "-").replace("—", "-").split())
@@ -187,15 +197,18 @@ def _availability(
     if instrument == "documentary_collection_da":
         return "acceptance", ["availability:derived_from_documentary_collection_da"]
 
+    # Explicit documentary-credit availability wording takes precedence over a generic
+    # day-count phrase. This prevents "available by acceptance at 90 days after B/L"
+    # from being downgraded to generic usance and losing acceptance-specific controls.
     patterns: list[tuple[AvailabilityType, tuple[str, ...]]] = [
         ("deferred_payment", (r"deferred\s+payment",)),
         ("negotiation", (r"available\s+by\s+negotiation", r"negotiation")),
+        ("acceptance", (r"available\s+by\s+acceptance", r"\bacceptance\b")),
+        ("sight", (r"at\s+sight", r"sight\s+payment", r"available\s+by\s+payment")),
         (
             "usance",
             (r"\busance\b", r"\d+\s*(?:calendar\s+)?days?\s+(?:after|from)\b"),
         ),
-        ("acceptance", (r"available\s+by\s+acceptance", r"\bacceptance\b")),
-        ("sight", (r"at\s+sight", r"sight\s+payment", r"available\s+by\s+payment")),
     ]
     for availability, candidates in patterns:
         matched = _first_match(text, candidates)
@@ -204,7 +217,16 @@ def _availability(
     return "unknown", []
 
 
-def _tenor(text: str) -> tuple[int | None, TenorStartEvent, str | None, list[str]]:
+def _tenor(
+    text: str,
+    availability: AvailabilityType,
+) -> tuple[int | None, TenorStartEvent, str | None, list[str]]:
+    # A day count in a sight clause usually describes document presentation, expiry,
+    # notice, or another operational period. It must not become payment tenor merely
+    # because it appears in the same reviewed fragment.
+    if availability == "sight":
+        return None, "unknown", None, []
+
     match = re.search(
         r"(?P<days>\d{1,4})\s*(?:calendar\s+)?days?\s*(?:after|from)\s+"
         r"(?P<anchor>b\s*/\s*l(?:\s+date)?|bill\s+of\s+lading(?:\s+date)?|"
@@ -213,24 +235,32 @@ def _tenor(text: str) -> tuple[int | None, TenorStartEvent, str | None, list[str
         text,
         flags=re.IGNORECASE,
     )
-    if not match:
-        simple = re.search(r"(?P<days>\d{1,4})\s*(?:calendar\s+)?days?", text)
+    if match:
+        anchor = match.group("anchor")
+        event: TenorStartEvent = "unknown"
+        for candidate, patterns in _START_EVENT_PATTERNS:
+            if _first_match(anchor, patterns):
+                event = candidate
+                break
+        return int(match.group("days")), event, match.group(0), [f"tenor:{match.group(0)}"]
+
+    if availability not in _DEFERRED_AVAILABILITY:
+        return None, "unknown", None, []
+
+    # An unanchored day count is retained only when it occurs in an explicit deferred
+    # payment context. This preserves "deferred payment 60 days" as partial while
+    # rejecting unrelated periods such as "documents within 21 days".
+    for pattern in _SIMPLE_TENOR_CONTEXT_PATTERNS:
+        simple = re.search(pattern, text, flags=re.IGNORECASE)
         if simple:
+            matched_text = simple.group(0)
             return (
                 int(simple.group("days")),
                 "unknown",
-                simple.group(0),
+                matched_text,
                 ["tenor:days_without_start_event"],
             )
-        return None, "unknown", None, []
-
-    anchor = match.group("anchor")
-    event: TenorStartEvent = "unknown"
-    for candidate, patterns in _START_EVENT_PATTERNS:
-        if _first_match(anchor, patterns):
-            event = candidate
-            break
-    return int(match.group("days")), event, match.group(0), [f"tenor:{match.group(0)}"]
+    return None, "unknown", None, []
 
 
 def _acceptance_party(text: str) -> str | None:
@@ -254,7 +284,7 @@ def normalize_payment_terms(reviewed_text: str) -> NormalizedPaymentTerms:
 
     instrument, matches = _instrument(text)
     availability, availability_matches = _availability(text, instrument)
-    tenor_days, start_event, tenor_text, tenor_matches = _tenor(text)
+    tenor_days, start_event, tenor_text, tenor_matches = _tenor(text, availability)
     matches.extend(availability_matches)
     matches.extend(tenor_matches)
 
@@ -279,7 +309,7 @@ def normalize_payment_terms(reviewed_text: str) -> NormalizedPaymentTerms:
         unresolved.append(
             "availability_type: sight, usance, deferred payment, acceptance, or negotiation is not explicit"
         )
-    if availability in {"usance", "deferred_payment", "acceptance"}:
+    if availability in _DEFERRED_AVAILABILITY:
         if tenor_days is None:
             unresolved.append(
                 "tenor_days: deferred or acceptance timing lacks an explicit day count"
