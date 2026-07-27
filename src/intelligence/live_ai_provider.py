@@ -34,7 +34,7 @@ class OpenAiLiveAiSettings(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    model_name: str = "gpt-5-mini"
+    model_name: str = Field(default="gpt-5-mini", min_length=1)
     timeout_seconds: float = Field(default=45.0, gt=0, le=180)
     max_output_tokens: int = Field(default=1400, ge=200, le=5000)
 
@@ -113,7 +113,6 @@ def _provider_instructions(request: GroundedLiveAiRequest) -> str:
         "Answer in the same language as the user's question. "
         "Every factual or prescriptive sentence must include at least one inline citation formatted exactly as [REF:ID]. "
         "Use only the allowed reference IDs below. Do not cite any other identifier. "
-        "Return one strict JSON object with exactly these keys: answer_markdown, cited_reference_ids, limitations. "
         "cited_reference_ids must list every unique ID used in answer_markdown and no unused ID. "
         "limitations must preserve at least one concrete authority limitation. "
         f"Mode instruction: {_MODE_GUIDANCE[request.mode]} "
@@ -192,6 +191,14 @@ def run_grounded_openai_live_ai(
             input=_provider_input(request),
             max_output_tokens=resolved.max_output_tokens,
             store=False,
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": "grounded_live_ai_response",
+                    "schema": GroundedLiveAiProviderPayload.model_json_schema(),
+                    "strict": True,
+                }
+            },
         )
     except Exception as exc:
         request_id = getattr(exc, "request_id", None)
