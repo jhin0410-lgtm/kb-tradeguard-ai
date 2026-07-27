@@ -28,7 +28,9 @@ def test_demo_packages_are_deterministic_and_match_expected_dispositions():
         assert run.assessment_result.brief.disposition == metadata.expected_disposition
         assert len(run.assessment_result.stage_traces) == 5
         assert run.output_case_hash == run.updated_case.case_hash
-        assert "approve" not in run.assessment_result.authority_boundary.casefold()
+        boundary = run.assessment_result.authority_boundary.casefold()
+        assert "does not approve or reject" in boundary
+        assert "deterministic" in boundary
 
 
 def test_unknown_demo_scenario_is_rejected():
