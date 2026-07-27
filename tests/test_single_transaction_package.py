@@ -94,6 +94,12 @@ def _case():
     )
 
 
+def _case_with_amount(amount):
+    case = _case()
+    transaction = {**case.approved_transactions[0], "amount_fc": amount}
+    return case.model_copy(update={"approved_transactions": [transaction]})
+
+
 def _request(transaction_id="EXP-001"):
     return SingleTransactionAssessmentRequest(
         pipeline_id="PIPELINE-PACKAGE-001",
@@ -137,6 +143,15 @@ def test_package_rejects_transaction_mismatch_before_pipeline_execution():
             case=case,
             request=_request("EXP-OTHER"),
         )
+
+
+def test_package_rejects_non_positive_or_non_numeric_transaction_amounts():
+    for amount in (0, -1, "not-a-number", "NaN", "Infinity"):
+        with pytest.raises(ValidationError, match="amount_fc"):
+            SingleTransactionAssessmentPackage(
+                case=_case_with_amount(amount),
+                request=_request(),
+            )
 
 
 def test_json_package_round_trip_loads_with_stable_hash(tmp_path):
