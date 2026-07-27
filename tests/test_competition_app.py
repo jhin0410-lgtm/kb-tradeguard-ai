@@ -28,3 +28,10 @@ def test_competition_app_has_presentation_and_mobile_contracts():
     assert "#audit" in source
     assert "@media(max-width:760px)" in competition_app.COMPETITION_CSS
     assert callable(streamlit_app.main)
+
+
+def test_streamlit_entrypoint_binds_the_public_https_demo_url():
+    assert streamlit_app.PUBLIC_DEMO_URL == (
+        "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
+    )
+    assert streamlit_app.PUBLIC_DEMO_URL.startswith("https://")
