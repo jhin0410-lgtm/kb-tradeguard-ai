@@ -18,6 +18,7 @@ from .data_providers import (
     ProviderConfigurationError,
     ProviderRequestError,
     ProviderResponseError,
+    UNComtradePreviewProvider,
     WorldBankCountryProvider,
 )
 
@@ -37,12 +38,10 @@ _INDICATOR_UNITS = {
 REAL_DATA_CSS = """
 <style>
 .tg-data-boundary {border:1px solid #cdd9e8;border-left:6px solid #1b63e9;border-radius:16px;padding:.82rem .9rem;background:#f5f8fc;color:#52627a;font-size:.76rem;line-height:1.52;margin-bottom:.7rem;}
-.tg-data-source-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem;margin:.55rem 0;}
+.tg-data-source-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:.55rem;margin:.55rem 0;}
 .tg-data-source {border:1px solid #dce4ef;border-radius:14px;padding:.72rem;background:#fff;}
 .tg-data-source strong {display:block;font-size:.77rem;color:#172033;margin-bottom:.16rem;}
 .tg-data-source span {display:block;font-size:.67rem;line-height:1.4;color:#647084;}
-@media(max-width:900px) {.tg-data-source-grid {grid-template-columns:1fr 1fr;}}
-@media(max-width:760px) {.tg-data-source-grid {grid-template-columns:1fr;}}
 </style>
 """
 
@@ -69,6 +68,24 @@ def _fetch_customs(
         end_yymm=end_yymm,
         country_code=country_code,
         hs_code=hs_code or None,
+    )
+
+
+@st.cache_data(ttl=21600, show_spinner=False)
+def _fetch_comtrade(
+    period: str,
+    partner_code: str,
+    hs_code: str,
+    flow_code: str,
+) -> dict:
+    return UNComtradePreviewProvider().get_trade_snapshot(
+        period=period,
+        reporter="KR",
+        partner=partner_code,
+        hs_code=hs_code or "TOTAL",
+        flow_code=flow_code,
+        frequency="A",
+        max_records=100,
     )
 
 
@@ -168,6 +185,54 @@ def _render_macro_tab(country_code: str) -> None:
             _render_provider_error(exc)
 
 
+def _render_comtrade_tab(country_code: str) -> None:
+    st.markdown("#### UN Comtrade 한국-거래국 무역통계")
+    st.caption(
+        "API Key가 필요 없는 공식 Preview API입니다. 한 기간·제한된 레코드만 조회하므로 완전한 통계 추출은 아닙니다."
+    )
+    default_year = str(max(date.today().year - 2, 1962))
+    col1, col2, col3 = st.columns(3)
+    period = col1.text_input("통계연도(YYYY)", value=default_year, key="comtrade_year")
+    hs_code = col2.text_input("HS Code", value="TOTAL", key="comtrade_hs")
+    flow_label = col3.selectbox(
+        "한국 기준 흐름",
+        options=["수출", "수입"],
+        key="comtrade_flow",
+    )
+    flow_code = "X" if flow_label == "수출" else "M"
+    if st.button("실제 UN 무역통계 조회", key="comtrade_fetch"):
+        try:
+            snapshot = _fetch_comtrade(period, country_code, hs_code, flow_code)
+            frame = pd.DataFrame(snapshot["results"])
+            if frame.empty:
+                st.warning("해당 연도·국가·HS 조건에서 Preview 결과가 없습니다.")
+            else:
+                visible = [
+                    "period",
+                    "reporter_name",
+                    "partner_name",
+                    "flow_name",
+                    "hs_code",
+                    "product_name",
+                    "primary_value_usd",
+                    "net_weight_kg",
+                    "is_reported",
+                ]
+                st.dataframe(
+                    frame[[column for column in visible if column in frame.columns]],
+                    hide_index=True,
+                    use_container_width=True,
+                )
+                st.caption(
+                    f"조회시각 {snapshot['retrieved_at']} · 응답 해시 {snapshot['response_hash'][:16]}…"
+                )
+            st.warning(
+                "UN Comtrade는 국가·품목 집계이며 거래 상대방이나 특정 기업의 수출입 실적을 제공하지 않습니다."
+            )
+        except Exception as exc:  # Streamlit provider boundary
+            _render_provider_error(exc)
+
+
 def _render_customs_tab(country_code: str) -> None:
     provider = KoreaCustomsTradeProvider()
     st.markdown("#### 관세청 국가·품목 무역통계")
@@ -228,7 +293,8 @@ def render_official_data_section(*, presentation_mode: bool) -> None:
         <div class="tg-data-source-grid">
           <div class="tg-data-source"><strong>한국수출입은행</strong><span>공식 참고환율과 전신환 매입·매도율 Snapshot</span></div>
           <div class="tg-data-source"><strong>World Bank</strong><span>GDP·물가·외환보유액·경상수지의 최신 비결측 관측치</span></div>
-          <div class="tg-data-source"><strong>관세청</strong><span>국가·HS Code별 수출액·수입액·중량·무역수지 집계</span></div>
+          <div class="tg-data-source"><strong>UN Comtrade</strong><span>API Key 없이 한국-거래국 연간 국가·품목 무역통계 Preview</span></div>
+          <div class="tg-data-source"><strong>관세청</strong><span>국가·HS Code별 월별 수출액·수입액·중량·무역수지 집계</span></div>
           <div class="tg-data-source"><strong>국세청과 구분</strong><span>국세청 API는 국내 사업자 상태 확인용이며 수출입 통계를 제공하지 않음</span></div>
         </div>
         """,
@@ -238,12 +304,19 @@ def render_official_data_section(*, presentation_mode: bool) -> None:
         return
 
     country_code = _scenario_country_code()
-    fx_tab, macro_tab, customs_tab = st.tabs(
-        ["공식 환율", f"{country_code} 국가경제", "국가·품목 무역통계"]
+    fx_tab, macro_tab, global_trade_tab, customs_tab = st.tabs(
+        [
+            "공식 환율",
+            f"{country_code} 국가경제",
+            "UN 무역통계",
+            "관세청 월별통계",
+        ]
     )
     with fx_tab:
         _render_fx_tab()
     with macro_tab:
         _render_macro_tab(country_code)
+    with global_trade_tab:
+        _render_comtrade_tab(country_code)
     with customs_tab:
         _render_customs_tab(country_code)
