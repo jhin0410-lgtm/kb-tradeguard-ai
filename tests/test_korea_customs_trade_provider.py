@@ -10,7 +10,7 @@ from src.data_providers.korea_customs_trade import (
 )
 
 
-_SAMPLE_XML = b"""<?xml version='1.0' encoding='UTF-8'?>
+_SAMPLE_XML = """<?xml version='1.0' encoding='UTF-8'?>
 <response>
   <header><resultCode>00</resultCode><resultMsg>OK</resultMsg></header>
   <body>
@@ -29,7 +29,7 @@ _SAMPLE_XML = b"""<?xml version='1.0' encoding='UTF-8'?>
       </item>
     </items>
   </body>
-</response>"""
+</response>""".encode("utf-8")
 
 
 def test_customs_provider_requires_a_service_key():
