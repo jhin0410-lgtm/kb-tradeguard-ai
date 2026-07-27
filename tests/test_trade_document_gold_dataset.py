@@ -1,22 +1,16 @@
-import json
-from pathlib import Path
-
-import pytest
-
-from src.intelligence.trade_document_rules import evaluate_trade_document
-from src.trade_finance_domain import PaymentStructure, TradeDocumentProfile
-
-
-DATASET_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "data"
-    / "gold"
-    / "trade_document_gold_v1.json"
+from src.intelligence.trade_document_gold import (
+    iter_semantic_preserving_gold_mutations,
+    list_trade_document_gold_cases,
+    load_trade_document_gold_dataset,
+)
+from src.intelligence.trade_document_rules import (
+    evaluate_trade_document,
+    load_trade_document_rule_registry,
 )
 
 
-def _dataset():
-    return json.loads(DATASET_PATH.read_text(encoding="utf-8"))
+GOLD_CASES = list_trade_document_gold_cases()
+MUTATIONS = list(iter_semantic_preserving_gold_mutations(GOLD_CASES))
 
 
 def _rule_ids(findings):
@@ -30,34 +24,81 @@ def _rule_ids(findings):
     return identifiers
 
 
-def test_gold_dataset_metadata_and_case_ids_are_governed():
-    dataset = _dataset()
+def _evaluate(document, payment):
+    return _rule_ids(evaluate_trade_document(document, payment))
 
-    assert dataset["dataset_version"] == "trade-document-gold/1.0"
+
+def test_gold_dataset_metadata_and_case_ids_are_governed():
+    dataset = load_trade_document_gold_dataset()
+
+    assert dataset["dataset_version"] == "trade-document-gold/1.1"
     assert dataset["source_mode"] == "synthetic_gold"
     assert "not legal opinions" in dataset["authority_boundary"]
-    assert len(dataset["cases"]) == 8
-    case_ids = [item["case_id"] for item in dataset["cases"]]
+    assert len(GOLD_CASES) == 30
+    case_ids = [item.case_id for item in GOLD_CASES]
     assert len(case_ids) == len(set(case_ids))
+    assert all(item.tags for item in GOLD_CASES)
 
 
-@pytest.mark.parametrize("case", _dataset()["cases"], ids=lambda item: item["case_id"])
-def test_gold_case_expected_and_forbidden_rule_ids(case):
-    document = TradeDocumentProfile.model_validate(case["document"])
-    payment = PaymentStructure.model_validate(case["payment_structure"])
+def test_gold_cases_match_the_exact_expected_rule_set():
+    for case in GOLD_CASES:
+        actual = _evaluate(case.document, case.payment_structure)
+        assert actual == set(case.expected_rule_ids), case.case_id
 
-    actual = _rule_ids(evaluate_trade_document(document, payment))
 
-    assert set(case["expected_rule_ids"]).issubset(actual)
-    assert set(case["forbidden_rule_ids"]).isdisjoint(actual)
+def test_gold_dataset_covers_every_governed_trade_document_rule():
+    governed_rule_ids = {
+        item.rule_id for item in load_trade_document_rule_registry().rules
+    }
+    covered_rule_ids = {
+        rule_id for case in GOLD_CASES for rule_id in case.expected_rule_ids
+    }
+
+    assert covered_rule_ids == governed_rule_ids
+
+
+def test_gold_dataset_contains_clean_negative_controls_for_both_document_kinds():
+    clean_cases = [item for item in GOLD_CASES if "negative_control" in item.tags]
+
+    assert len(clean_cases) >= 5
+    assert all(not item.expected_rule_ids for item in clean_cases)
+    assert {item.document.document_type for item in clean_cases} >= {
+        "contract",
+        "letter_of_credit",
+    }
 
 
 def test_gold_cases_keep_documents_and_payments_transaction_linked():
-    for case in _dataset()["cases"]:
-        document = TradeDocumentProfile.model_validate(case["document"])
-        payment = PaymentStructure.model_validate(case["payment_structure"])
+    for case in GOLD_CASES:
+        assert case.payment_structure.transaction_id in case.document.linked_transaction_ids
+        assert (
+            case.payment_structure.payment_structure_id
+            == case.document.payment_structure_id
+        )
+        assert case.document.record_status in {"verified", "partial"}
+        assert case.payment_structure.record_status in {"verified", "partial"}
 
-        assert payment.transaction_id in document.linked_transaction_ids
-        assert payment.payment_structure_id == document.payment_structure_id
-        assert document.record_status in {"verified", "partial"}
-        assert payment.record_status in {"verified", "partial"}
+
+def test_semantic_preserving_mutation_suite_is_large_unique_and_rule_invariant():
+    assert len(MUTATIONS) == 150
+    mutation_ids = [item.mutation_id for item in MUTATIONS]
+    assert len(mutation_ids) == len(set(mutation_ids))
+    assert {item.mutation_kind for item in MUTATIONS} == {
+        "source_metadata",
+        "identifier_relabel",
+        "transaction_relink",
+        "partial_status",
+        "irrelevant_reviewed_field",
+    }
+
+    for mutation in MUTATIONS:
+        actual = _evaluate(mutation.document, mutation.payment_structure)
+        assert actual == set(mutation.expected_rule_ids), mutation.mutation_id
+        assert (
+            mutation.payment_structure.transaction_id
+            in mutation.document.linked_transaction_ids
+        )
+        assert (
+            mutation.payment_structure.payment_structure_id
+            == mutation.document.payment_structure_id
+        )
