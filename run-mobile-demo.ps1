@@ -18,14 +18,14 @@ if (-not $address) {
 }
 
 Write-Host ""
-Write-Host "KB TradeGuard AI · Mobile compact demo" -ForegroundColor Cyan
+Write-Host "KB TradeGuard AI · Polished Mobile V2" -ForegroundColor Cyan
 Write-Host "PC와 휴대폰을 같은 Wi-Fi에 연결하십시오."
 Write-Host "휴대폰 URL: http://${address}:$Port/?view=compact" -ForegroundColor Green
 Write-Host "실제 고객자료나 API Key를 입력하지 마십시오. 합성 데모 전용입니다." -ForegroundColor Yellow
 Write-Host "Windows 방화벽이 물으면 Private network에만 허용하십시오."
 Write-Host ""
 
-py -3.13 -m streamlit run assessment_app_v2.py `
+py -3.13 -m streamlit run assessment_app_v2_mobile.py `
     --server.address 0.0.0.0 `
     --server.port $Port `
     --server.headless true
