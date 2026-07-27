@@ -4,9 +4,11 @@ from src.competition_readiness import build_competition_readiness_report
 def test_competition_readiness_report_is_complete_and_deterministic():
     report = build_competition_readiness_report()
 
-    assert report["report_version"] == "competition-readiness/1.2"
+    assert report["report_version"] == "competition-readiness/1.3"
     assert report["status"] == "ready"
     assert report["network_calls"] == "none"
+    assert report["public_demo_entrypoint"] == "streamlit_app.py"
+    assert report["public_demo_data_mode"] == "synthetic_showcase_only"
     assert report["missing_files"] == []
     assert report["public_repo_safety_status"] == "safe"
     assert report["public_repo_safety_finding_count"] == 0
