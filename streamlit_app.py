@@ -8,6 +8,8 @@ import os
 import streamlit as st
 
 import competition_app as app
+from src.competition_ai_boundary_view import render_ai_boundary_section
+from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
 from src.demo_scenarios import DemoScenarioMetadata
@@ -39,13 +41,29 @@ def _secret_to_environment(name: str) -> None:
         os.environ[name] = value
 
 
+def _render_internal_benchmark() -> None:
+    metrics = build_internal_trade_document_benchmark()
+    st.markdown("#### 내부 합성 회귀평가")
+    exact_rate = f"{metrics.exact_match_rate * 100:.1f}%"
+    columns = st.columns(4)
+    columns[0].metric("Rule-ID 완전일치", exact_rate)
+    columns[1].metric("검토 Fixture", metrics.case_count)
+    columns[2].metric("추가 탐지", metrics.false_positive_rule_count)
+    columns[3].metric("누락 탐지", metrics.false_negative_rule_count)
+    st.caption(
+        "프로젝트가 작성하고 사람이 검토한 구조화 합성 Fixture에 대한 회귀 결과입니다. "
+        "외부 원문 문서 정확도, 법률 검토 일치율, 신용성과 또는 운영 적합성을 뜻하지 않습니다."
+    )
+
+
 def _render_audit(run, scenario_id: str) -> None:
     st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">06 · 검증 현황과 감사 기록</div>',
+        '<div class="tg-section-title">07 · 검증 현황과 감사 기록</div>',
         unsafe_allow_html=True,
     )
     app._render_validation_status()
+    _render_internal_benchmark()
     st.divider()
     snapshot = app.build_presentation_snapshot_v2(run, scenario_id=scenario_id)
     html = app.render_presentation_snapshot_html(snapshot)
@@ -81,6 +99,7 @@ def _render_bottom_nav() -> None:
           <a href="#summary" target="_self">요약</a>
           <a href="#evidence" target="_self">근거</a>
           <a href="#actions" target="_self">실행</a>
+          <a href="#ai" target="_self">AI</a>
           <a href="#products" target="_self">상품</a>
           <a href="#data" target="_self">데이터</a>
           <a href="#audit" target="_self">감사</a>
@@ -111,6 +130,7 @@ def _render_competition_page() -> None:
     app._render_verdict(run)
     app._render_risks(run, presentation_mode=presentation_mode)
     app._render_actions(run, presentation_mode=presentation_mode)
+    render_ai_boundary_section(presentation_mode=presentation_mode)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
     render_official_data_section(presentation_mode=presentation_mode)
     if not presentation_mode:
