@@ -43,3 +43,15 @@ def test_streamlit_entrypoint_exposes_title_as_the_legacy_scenario_label():
 
     assert scenarios
     assert all(item.label == item.title for item in scenarios)
+
+
+def test_streamlit_entrypoint_isolates_legacy_pages_and_surfaces_topic_six_capabilities():
+    source = Path(streamlit_app.__file__).read_text(encoding="utf-8")
+
+    assert "st.navigation([page], position=\"hidden\")" in source
+    assert "render_product_consultation_section" in source
+    assert "render_official_data_section" in source
+    assert "#products" in source
+    assert "#data" in source
+    assert "pages/" in source
+    assert "render_grounded_live_ai_panel" not in source
