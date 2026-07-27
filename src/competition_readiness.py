@@ -1,8 +1,9 @@
 """Deterministic release-readiness checks for the competition prototype.
 
 The report verifies repository artifacts, showcase scenarios, presentation snapshots,
-Gold Dataset coverage, and public-repository safety. It performs no network calls and
-does not change any case, finding, calculation, or product candidate.
+Gold Dataset coverage, public-demo entrypoints, and public-repository safety. It
+performs no network calls and does not change any case, finding, calculation, or
+product candidate.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from typing import Any
 
 from .assessment_app_presentation import build_presentation_snapshot, scenario_narrative
 from .assessment_app_v2 import build_presentation_snapshot_v2
+from .competition_demo import build_competition_validation_status
 from .demo_scenarios import list_demo_scenarios, load_demo_scenario
 from .intelligence.single_transaction_package import run_single_transaction_package
 from .intelligence.trade_document_gold import (
@@ -28,16 +30,21 @@ ROOT = Path(__file__).resolve().parents[1]
 _REQUIRED_FILES = [
     ".env.example",
     ".gitignore",
+    ".streamlit/config.toml",
     "LICENSE",
     "NOTICE.md",
     "README.md",
     "SECURITY.md",
     "assessment_app.py",
     "assessment_app_v2.py",
+    "assessment_app_v2_mobile.py",
+    "competition_app.py",
+    "streamlit_app.py",
     "requirements.txt",
     "run-mobile-demo.ps1",
     "docs/assessment_demo_app.md",
     "docs/competition_demo_script.md",
+    "docs/public_competition_demo.md",
     "docs/trade_document_gold_dataset.md",
     "docs/ui_v2_mobile.md",
     "data/gold/trade_document_gold_v1.json",
@@ -72,6 +79,10 @@ def build_competition_readiness_report() -> dict[str, Any]:
     unexpected_rule_ids = sorted(covered_rule_ids - governed_rule_ids)
     if uncovered_rule_ids or unexpected_rule_ids:
         failures.append("Gold Dataset Rule-ID coverage does not match the registry")
+
+    compact_validation = build_competition_validation_status()
+    if compact_validation.governed_rule_count != len(governed_rule_ids):
+        failures.append("Public demo validation summary does not match the registry")
 
     scenario_results = []
     for metadata in list_demo_scenarios():
@@ -110,9 +121,11 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
 
     return {
-        "report_version": "competition-readiness/1.2",
+        "report_version": "competition-readiness/1.3",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
+        "public_demo_entrypoint": "streamlit_app.py",
+        "public_demo_data_mode": "synthetic_showcase_only",
         "required_file_count": len(_REQUIRED_FILES),
         "missing_files": missing_files,
         "public_repo_safety_status": public_safety["status"],
