@@ -2,6 +2,7 @@ from pathlib import Path
 
 import competition_app
 import streamlit_app
+from src.demo_scenarios import list_demo_scenarios
 
 
 def test_competition_app_is_single_screen_synthetic_demo():
@@ -35,3 +36,10 @@ def test_streamlit_entrypoint_binds_the_public_https_demo_url():
         "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
     )
     assert streamlit_app.PUBLIC_DEMO_URL.startswith("https://")
+
+
+def test_streamlit_entrypoint_exposes_title_as_the_legacy_scenario_label():
+    scenarios = list_demo_scenarios()
+
+    assert scenarios
+    assert all(item.label == item.title for item in scenarios)
