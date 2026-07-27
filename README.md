@@ -19,25 +19,42 @@
 
 KB TradeGuard AI는 이 정보를 하나의 `Decision Brief`, 근거 ID, 의존형 Action Plan, 감사 패키지로 연결합니다.
 
-## 공모전 데모 앱
+## Product UI V2
+
+공모전의 기본 실행 화면은 `assessment_app_v2.py`입니다.
 
 ```powershell
 py -3.13 -m pip install -r requirements.txt
-py -3.13 -m streamlit run assessment_app.py
+py -3.13 -m streamlit run assessment_app_v2.py
 ```
 
-대표 데모는 `O/A 90일 고위험 수출` 시나리오입니다. 앱은 다음 순서로 구성됩니다.
+V2 목표:
 
-1. 요약 및 통합 사전진단 상태
-2. 위험·근거와 Reference ID
-3. 계약서·L/C Finding 및 전문가 검토 상태
-4. 거래 규모와 재무 감내능력
-5. KB·K-SURE 상담 후보
-6. 담당자·선행조건이 포함된 Action Plan
-7. Markdown·JSON·Manifest·감사 ZIP
-8. 선택형 Grounded Live AI
+- **60초 제품 화면**: disposition, 상위 위험 3개, 다음 행동 3개를 상세 표보다 먼저 표시
+- **위험 중심 Summary**: 불투명한 총점 없이 심각도·사실 근거·미확인 사실·Reference ID 유지
+- **Evidence Drawer**: 위험 문장에서 RiskSignal·Evidence·Calculation·CountryFact·문서 레코드까지 추적
+- **Mobile compact mode**: 반응형 CSS와 휴대폰·발표용 4탭 정보구조
+- **발표 Snapshot V2**: 상위 위험·행동·Stage·Case hash를 담은 오프라인 HTML 및 JSON
 
-입력은 합성 대표 시나리오 또는 `single-transaction-package/1.0` JSON Package를 사용합니다. 입력값을 자동 보정하거나 누락값을 추정하지 않습니다.
+대표 데모는 `O/A 90일 고위험 수출` 시나리오입니다. 입력은 합성 대표 시나리오 또는 `single-transaction-package/1.0` JSON Package를 사용하며, 누락값을 자동 보정하거나 추정하지 않습니다.
+
+## 휴대폰 연결
+
+PC와 휴대폰을 같은 Wi-Fi에 연결한 뒤 다음 명령을 실행합니다.
+
+```powershell
+.\run-mobile-demo.ps1
+```
+
+스크립트가 다음 형식의 접속주소를 출력합니다.
+
+```text
+http://<PC IPv4>:8501/?view=compact
+```
+
+공개 URL로 배포한 경우에도 URL 뒤에 `?view=compact`를 붙이면 휴대폰용 화면이 기본 선택됩니다. 브라우저의 홈 화면 추가 기능은 사용할 수 있지만, 이는 네이티브 Android·iOS 앱이 아니라 반응형 웹앱입니다. 상세 연결·배포·보안 경계는 `docs/ui_v2_mobile.md`에 정리했습니다.
+
+실제 고객자료, 원본 계약·송장·L/C, API Key는 로컬 LAN 또는 공개 데모에 입력하지 않습니다.
 
 ## 결정론적 5단계 파이프라인
 
@@ -84,7 +101,7 @@ Live AI는 기본 OFF입니다. 설정된 경우에도 완료된 결정론적 �
 - 금리·한도·실행조건 확정
 - 누락정보 추정
 
-모델 응답은 허용된 `[REF:ID]`만 사용할 수 있고, 로컬 검증에 실패하면 화면에 신뢰 결과로 표시되지 않습니다. 외부 API가 없어도 전체 분석·보고서·다운로드는 정상적으로 독립 실행됩니다.
+모델 응답은 허용된 `[REF:ID]`만 사용할 수 있고, 로컬 검증에 실패하면 화면에 신뢰 결과로 표시되지 않습니다. 외부 API가 없어도 전체 분석·보고서·다운로드는 독립 실행됩니다.
 
 ## Gold Dataset과 공격 테스트
 
@@ -120,13 +137,21 @@ stage_trace.json
 audit_summary.json
 artifact_manifest.json
 competition-presentation-snapshot.json
+kb-tradeguard-presentation-snapshot-v2.html
+kb-tradeguard-presentation-snapshot-v2.json
 ```
 
 입력 Package hash, 입력 Case hash, 출력 Case hash와 파일별 SHA-256을 함께 보존합니다. Hash는 변경 추적 식별자이며 결과의 법적·업무적 정확성을 보증하지 않습니다.
 
 ## 전체 실행 진입점
 
-### 공모전 단일 거래 사전진단
+### Product UI V2
+
+```powershell
+py -3.13 -m streamlit run assessment_app_v2.py
+```
+
+### 기존 상세 사전진단 UI
 
 ```powershell
 py -3.13 -m streamlit run assessment_app.py
@@ -150,8 +175,8 @@ py -3.13 -m streamlit run app.py
 py -3.13 scripts/public_repo_safety_check.py
 py -3.13 scripts/competition_readiness_check.py
 py -3.13 -m pytest -q
-py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py pages src tests scripts
-py -3.13 -c "import app; import copilot_app; import assessment_app; import src"
+py -3.13 -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py pages src tests scripts
+py -3.13 -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import src"
 ```
 
 검증 스크립트는 네트워크 호출 없이 다음을 확인합니다.
@@ -159,7 +184,7 @@ py -3.13 -c "import app; import copilot_app; import assessment_app; import src"
 - 공개 저장소에 포함되면 안 되는 경로와 credential-shaped text
 - 필수 제출·데모·공개운영 파일 존재
 - 대표 시나리오 4개의 예상 disposition 유지
-- Presentation Snapshot 생성
+- Presentation Snapshot V1·V2 생성
 - Gold Case 30개와 Mutation 150개 구성
 - Rule Registry 22개 전체 Coverage
 
@@ -169,7 +194,8 @@ Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는
 
 - `docs/competition_demo_script.md`: 3분 발표 동선과 발표 문장
 - `docs/submission_checklist.md`: 캡처·제출 파일·금지 표현 점검
-- `docs/assessment_demo_app.md`: 데모 앱 입력·화면·Live AI 경계
+- `docs/assessment_demo_app.md`: 기존 데모 앱 입력·화면·Live AI 경계
+- `docs/ui_v2_mobile.md`: Product UI V2·휴대폰 연결·배포 경계
 - `docs/trade_document_gold_dataset.md`: Gold Dataset과 Mutation 설계
 - `docs/competition_hardening_and_live_ai.md`: 검증 및 Live AI 아키텍처
 
