@@ -71,6 +71,13 @@ from .trade_document_assessment import (
     TradeDocumentScreeningOutcome,
     apply_trade_document_screening,
 )
+from .trade_document_gold import (
+    TradeDocumentGoldCase,
+    TradeDocumentGoldMutation,
+    iter_semantic_preserving_gold_mutations,
+    list_trade_document_gold_cases,
+    load_trade_document_gold_dataset,
+)
 from .trade_document_rules import (
     build_document_risk_signals,
     evaluate_trade_document,
@@ -121,6 +128,8 @@ __all__ = [
     "SingleTransactionAssessmentResult",
     "SingleTransactionPackageExport",
     "SingleTransactionPackageRun",
+    "TradeDocumentGoldCase",
+    "TradeDocumentGoldMutation",
     "TradeDocumentScreeningOutcome",
     "TradeFinanceNeedProfile",
     "TransactionAssessmentPipelineError",
@@ -150,12 +159,15 @@ __all__ = [
     "evaluate_trade_document",
     "export_single_transaction_package_run",
     "finding_review_summary",
+    "iter_semantic_preserving_gold_mutations",
     "latest_finding_review_decisions",
+    "list_trade_document_gold_cases",
     "load_fatf_registry",
     "load_product_registry",
     "load_reconciliation_registry",
     "load_single_transaction_package",
     "load_single_transaction_pipeline_manifest",
+    "load_trade_document_gold_dataset",
     "load_trade_document_rule_registry",
     "load_transaction_capacity_registry",
     "load_transaction_decision_brief_registry",
