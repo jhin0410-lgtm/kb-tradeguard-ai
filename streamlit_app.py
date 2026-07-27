@@ -12,6 +12,7 @@ from src.competition_ai_boundary_view import render_ai_boundary_section
 from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
+from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import DemoScenarioMetadata
 
 
@@ -39,6 +40,20 @@ def _secret_to_environment(name: str) -> None:
         value = ""
     if value:
         os.environ[name] = value
+
+
+def _ensure_topic6_run(scenario_id: str):
+    run = st.session_state.get("competition_run")
+    active = st.session_state.get("competition_scenario_id")
+    if run is not None and active == scenario_id:
+        return run
+    package = prepare_topic6_demo_package(app.load_demo_scenario(scenario_id))
+    with st.spinner("검토된 합성 거래와 명시적 외환관리 필요를 결정론적으로 분석합니다."):
+        run = app.run_single_transaction_package(package)
+    st.session_state["competition_run"] = run
+    st.session_state["competition_package"] = package
+    st.session_state["competition_scenario_id"] = scenario_id
+    return run
 
 
 def _render_internal_benchmark() -> None:
@@ -122,7 +137,7 @@ def _render_competition_page() -> None:
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
         scenario_id = app._render_scenario_control(scenario_id)
-    run = app._ensure_run(scenario_id)
+    run = _ensure_topic6_run(scenario_id)
     narrative = app.scenario_narrative(scenario_id)
     if narrative is not None and not presentation_mode:
         st.caption(f"결정 질문 · {narrative.decision_question}")
