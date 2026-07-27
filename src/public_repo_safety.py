@@ -1,7 +1,7 @@
 """Local public-repository safety checks with no network calls.
 
 The scanner looks for credential-shaped text and tracked paths that should remain
-local.  It is a release guardrail, not a substitute for provider-side secret
+local. It is a release guardrail, not a substitute for provider-side secret
 rotation, GitHub secret scanning, or manual review of repository history.
 """
 
@@ -79,25 +79,8 @@ _SECRET_PATTERNS = {
     ),
 }
 
-_TEXT_SUFFIXES = {
-    "",
-    ".cfg",
-    ".cmd",
-    ".css",
-    ".csv",
-    ".env",
-    ".html",
-    ".ini",
-    ".json",
-    ".md",
-    ".ps1",
-    ".py",
-    ".rst",
-    ".toml",
-    ".txt",
-    ".yaml",
-    ".yml",
-}
+_MAX_TEXT_SCAN_BYTES = 5 * 1024 * 1024
+_BINARY_SAMPLE_BYTES = 8192
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -129,11 +112,19 @@ def _forbidden_path_reason(path: Path, root: Path) -> str | None:
 
 
 def _read_text(path: Path) -> str | None:
-    if path.suffix.lower() not in _TEXT_SUFFIXES:
+    """Read every bounded UTF-8-decodable non-binary file regardless of suffix."""
+
+    try:
+        if path.stat().st_size > _MAX_TEXT_SCAN_BYTES:
+            return None
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    if b"\x00" in raw[:_BINARY_SAMPLE_BYTES]:
         return None
     try:
-        return path.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
         return None
 
 
@@ -143,6 +134,7 @@ def build_public_repo_safety_report(root: str | Path | None = None) -> dict[str,
     repository_root = Path(root).resolve() if root is not None else ROOT
     findings: list[dict[str, Any]] = []
     scanned_file_count = 0
+    text_scanned_file_count = 0
 
     for path in sorted(repository_root.rglob("*")):
         if not path.is_file() or _is_excluded(path, repository_root):
@@ -163,6 +155,7 @@ def build_public_repo_safety_report(root: str | Path | None = None) -> dict[str,
         text = _read_text(path)
         if text is None:
             continue
+        text_scanned_file_count += 1
         for pattern_name, pattern in _SECRET_PATTERNS.items():
             match = pattern.search(text)
             if match is None:
@@ -178,13 +171,15 @@ def build_public_repo_safety_report(root: str | Path | None = None) -> dict[str,
             )
 
     return {
-        "report_version": "public-repo-safety/1.0",
+        "report_version": "public-repo-safety/1.1",
         "status": "safe" if not findings else "review_required",
         "network_calls": "none",
         "scanned_file_count": scanned_file_count,
+        "text_scanned_file_count": text_scanned_file_count,
         "finding_count": len(findings),
         "findings": findings,
         "limitations": [
+            "UTF-8 text-like files larger than 5 MiB and binary or non-UTF-8 files are not content-scanned.",
             "Pattern scanning cannot prove that repository history, forks, caches, Actions logs, or external systems contain no secrets.",
             "Any exposed credential must be revoked or rotated even after the file is removed.",
         ],
