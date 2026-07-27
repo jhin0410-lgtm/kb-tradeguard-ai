@@ -42,6 +42,9 @@ def test_grounding_packet_is_bounded_to_completed_assessment_records():
     assert request.deterministic_context["brief"]["disposition"] == (
         "additional_information_required"
     )
+    records = request.deterministic_context["reference_records"]
+    assert set(request.allowed_reference_ids) == set(records)
+    assert all(isinstance(records[item], dict) for item in request.allowed_reference_ids)
     assert "must not approve" in request.authority_boundary
 
 
@@ -69,7 +72,38 @@ def test_grounded_response_requires_matching_inline_and_declared_references():
 
     assert validation.accepted is True
     assert validation.parsed_reference_ids == [reference_id]
+    assert validation.uncited_segments == []
     assert validation.errors == []
+
+
+def test_answer_with_one_cited_and_one_uncited_sentence_is_rejected():
+    run = _run()
+    request = build_live_ai_grounding_packet(
+        run.updated_case,
+        run.assessment_result,
+        request_id="LIVE-AI-UNCITED",
+        mode="explain_brief",
+        user_question="검토결과를 설명해 주세요.",
+    )
+    reference_id = request.allowed_reference_ids[0]
+    response = GroundedLiveAiResponse(
+        request_id=request.request_id,
+        answer_markdown=(
+            f"추가 확인이 필요한 기록이 있습니다. [REF:{reference_id}] "
+            "따라서 거래가 승인될 것입니다."
+        ),
+        cited_reference_ids=[reference_id],
+        provider_name="test-provider",
+        model_name="test-model",
+        generated_at=datetime(2026, 7, 27, 12, 0, tzinfo=timezone.utc),
+        limitations=[request.authority_boundary],
+    )
+
+    validation = validate_grounded_live_ai_response(request, response)
+
+    assert validation.accepted is False
+    assert validation.uncited_segments == ["따라서 거래가 승인될 것입니다."]
+    assert any("Every substantive" in item for item in validation.errors)
 
 
 def test_unknown_or_mismatched_citations_are_rejected():
@@ -122,7 +156,8 @@ def test_response_without_inline_citation_or_limitation_is_rejected():
     validation = validate_grounded_live_ai_response(request, response)
 
     assert validation.accepted is False
-    assert len(validation.errors) == 2
+    assert validation.uncited_segments == ["근거 표기 없이 작성된 설명입니다."]
+    assert len(validation.errors) == 3
 
 
 def test_grounding_packet_rejects_case_result_hash_mismatch():
