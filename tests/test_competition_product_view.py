@@ -1,6 +1,7 @@
 import pytest
 
 from src.competition_product_view import build_product_consultation_cards
+from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import load_demo_scenario
 from src.intelligence.single_transaction_package import run_single_transaction_package
 
@@ -14,7 +15,7 @@ _ALLOWED_STATUSES = {
 
 
 def _default_run():
-    package = load_demo_scenario("oa_high_risk")
+    package = prepare_topic6_demo_package(load_demo_scenario("oa_high_risk"))
     return run_single_transaction_package(package)
 
 
@@ -28,6 +29,7 @@ def test_default_competition_case_surfaces_governed_product_consultation_cards()
     assert all(card.next_action for card in cards)
     assert any(card.provider == "K-SURE" for card in cards)
     assert any(card.provider == "KB Kookmin Bank" for card in cards)
+    assert any(card.product_name == "환변동보험" for card in cards)
 
 
 def test_product_consultation_cards_do_not_claim_approval_or_pricing():
