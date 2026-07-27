@@ -1,8 +1,8 @@
 """Deterministic release-readiness checks for the competition prototype.
 
 The report verifies repository artifacts, showcase scenarios, presentation snapshots,
-and governed Gold Dataset coverage. It performs no network calls and does not change
-any case, finding, calculation, or product candidate.
+Gold Dataset coverage, and public-repository safety. It performs no network calls and
+does not change any case, finding, calculation, or product candidate.
 """
 
 from __future__ import annotations
@@ -19,19 +19,26 @@ from .intelligence.trade_document_gold import (
     load_trade_document_gold_dataset,
 )
 from .intelligence.trade_document_rules import load_trade_document_rule_registry
+from .public_repo_safety import build_public_repo_safety_report
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 _REQUIRED_FILES = [
+    ".env.example",
+    ".gitignore",
+    "LICENSE",
+    "NOTICE.md",
+    "README.md",
+    "SECURITY.md",
     "assessment_app.py",
     "requirements.txt",
-    "README.md",
     "docs/assessment_demo_app.md",
     "docs/competition_demo_script.md",
     "docs/trade_document_gold_dataset.md",
     "data/gold/trade_document_gold_v1.json",
     "data/reference/trade_document_rules_v1.json",
+    "scripts/public_repo_safety_check.py",
     "scripts/trade_document_gold_summary.py",
     "scripts/live_ai_provider_smoke_test.py",
 ]
@@ -44,6 +51,10 @@ def build_competition_readiness_report() -> dict[str, Any]:
     missing_files = [path for path in _REQUIRED_FILES if not (ROOT / path).exists()]
     if missing_files:
         failures.append("Missing required repository artifacts")
+
+    public_safety = build_public_repo_safety_report(ROOT)
+    if public_safety["status"] != "safe":
+        failures.append("Public repository safety review is required")
 
     dataset = load_trade_document_gold_dataset()
     gold_cases = list_trade_document_gold_cases()
@@ -88,11 +99,13 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
 
     return {
-        "report_version": "competition-readiness/1.0",
+        "report_version": "competition-readiness/1.1",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
         "required_file_count": len(_REQUIRED_FILES),
         "missing_files": missing_files,
+        "public_repo_safety_status": public_safety["status"],
+        "public_repo_safety_finding_count": public_safety["finding_count"],
         "demo_scenario_count": len(scenario_results),
         "scenario_results": scenario_results,
         "gold_dataset_version": dataset["dataset_version"],
@@ -105,7 +118,8 @@ def build_competition_readiness_report() -> dict[str, Any]:
         "failures": failures,
         "authority_boundary": (
             "Readiness means the local prototype artifacts and governed deterministic fixtures "
-            "are internally consistent. It does not establish legal correctness, bank approval, "
-            "K-SURE acceptance, compliance clearance, or production deployment readiness."
+            "are internally consistent and the current working tree passed the local credential-pattern scan. "
+            "It does not establish repository-history erasure, legal correctness, bank approval, K-SURE "
+            "acceptance, compliance clearance, or production deployment readiness."
         ),
     }
