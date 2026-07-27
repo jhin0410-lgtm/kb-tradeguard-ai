@@ -38,7 +38,7 @@ class FXConsultationOption:
 
 
 def _transaction(run) -> dict[str, Any] | None:
-    transaction_id = run.assessment_result.request.transaction_id
+    transaction_id = run.assessment_result.transaction_id
     for item in run.updated_case.approved_transactions:
         if str(item.get("transaction_id")) == transaction_id:
             return item
