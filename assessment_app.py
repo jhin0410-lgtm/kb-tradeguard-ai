@@ -18,12 +18,12 @@ from src.assessment_app_support import (
     parse_package_json_bytes,
     stage_rows,
 )
+from src.assessment_live_ai_panel import render_grounded_live_ai_panel
 from src.demo_scenarios import list_demo_scenarios, load_demo_scenario
 from src.intelligence.decision_brief_report import (
     render_single_transaction_assessment_markdown,
 )
 from src.intelligence.finding_review import latest_finding_review_decisions
-from src.intelligence.live_ai_contract import build_live_ai_grounding_packet
 from src.intelligence.single_transaction_package import (
     SingleTransactionAssessmentPackage,
     SingleTransactionPackageRun,
@@ -143,6 +143,13 @@ def _run_controls(package: SingleTransactionAssessmentPackage | None, source_key
             st.session_state["assessment_run"] = run
             st.session_state["assessment_package"] = package
             st.session_state["assessment_source_key"] = source_key
+            for key in (
+                "live_ai_packet",
+                "live_ai_execution",
+                "live_ai_error",
+                "live_ai_case_hash",
+            ):
+                st.session_state.pop(key, None)
 
 
 def _render_metrics(run: SingleTransactionPackageRun) -> None:
@@ -449,53 +456,7 @@ def _render_audit_tab(
 
 
 def _render_live_ai_tab(run: SingleTransactionPackageRun) -> None:
-    st.subheader("선택형 Grounded Live AI")
-    st.caption(
-        "현재 단계에서는 Provider 호출 전 Grounding Packet과 인용 검증 경계를 보여줍니다. "
-        "Live AI가 꺼져도 전체 분석·보고서·다운로드는 정상 동작합니다."
-    )
-    enabled = st.toggle("Live AI 실험 모드", value=False)
-    if not enabled:
-        st.info("기본값은 OFF입니다. 결정론적 결과가 최종 기준으로 유지됩니다.")
-        return
-
-    mode = st.selectbox(
-        "AI 역할",
-        [
-            "explain_brief",
-            "prepare_consultation",
-            "evidence_lookup",
-            "compare_reviewed_options",
-        ],
-    )
-    question = st.text_area(
-        "질문",
-        value="왜 이 사전진단 상태가 나왔고 은행 상담 전에 무엇을 준비해야 하나요?",
-        height=100,
-    )
-    if st.button("Grounding Packet 생성"):
-        try:
-            packet = build_live_ai_grounding_packet(
-                run.updated_case,
-                run.assessment_result,
-                request_id=f"LIVE-{run.assessment_result.pipeline_id}",
-                mode=mode,
-                user_question=question,
-            )
-        except Exception as exc:
-            st.error(f"Grounding Packet 생성 실패: {exc}")
-            return
-        st.success("허용된 Reference ID와 결정론적 Context만 포함했습니다.")
-        st.json(packet.model_dump(mode="json"))
-        st.download_button(
-            "Grounding Packet 다운로드",
-            data=_json_text(packet.model_dump(mode="json")).encode("utf-8"),
-            file_name="live_ai_grounding_packet.json",
-            mime="application/json",
-        )
-        st.warning(
-            "실제 모델 응답은 모든 문장에 [REF:ID] 인용을 포함하고 검증을 통과한 경우에만 표시해야 합니다."
-        )
+    render_grounded_live_ai_panel(run)
 
 
 def _render_results(
