@@ -1,10 +1,13 @@
 # Product UI V2 and Mobile Access
 
+## Entry points
+
+- `assessment_app_v2.py`: desktop-first V2 with 60-second and detailed review modes
+- `assessment_app_v2_mobile.py`: mobile-first V2 with a compact hero, compressed 2×2 flow, collapsed sidebar, and a main-page run button
+
+Both entrypoints reuse the same deterministic assessment pipeline and governed V2 view models.
+
 ## V2 goals
-
-The V2 Streamlit entrypoint is `assessment_app_v2.py`.
-
-It adds five presentation capabilities without changing the deterministic trade-finance engine:
 
 1. **60-second product screen** — disposition, top three risks, evidence coverage, and next three actions appear before detailed tables.
 2. **Risk-first summary** — no opaque aggregate score; ranked concerns keep severity, category, factual basis, unresolved facts, and Reference IDs.
@@ -21,22 +24,28 @@ py -3.13 -m pip install -r requirements.txt
 py -3.13 -m streamlit run assessment_app_v2.py
 ```
 
-The V2 app defaults to the 60-second product screen. Use the sidebar to switch to the detailed nine-tab review mode.
+## Polished phone run
 
-## Phone connection on the same Wi-Fi
+The phone-specific entrypoint is optimized for the screenshots reviewed on 2026-07-28:
+
+- the hero is shorter and no longer dominates the first viewport;
+- the three product principles are compact pills rather than full-height cards;
+- the four-step flow uses a 2×2 grid;
+- the sidebar starts collapsed;
+- the primary `5단계 사전진단 시작` action is also available in the main page.
 
 Use the included Windows launcher:
 
 ```powershell
-.\run-mobile-demo.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\run-mobile-demo.ps1
 ```
 
 The script:
 
 - finds a local IPv4 address;
 - binds Streamlit to `0.0.0.0`;
-- prints a phone URL such as `http://192.168.0.15:8501/?view=compact`;
-- starts `assessment_app_v2.py` in mobile compact mode.
+- launches `assessment_app_v2_mobile.py`;
+- prints a phone URL such as `http://192.168.0.15:8501/?view=compact`.
 
 Requirements:
 
@@ -49,7 +58,7 @@ Manual equivalent:
 
 ```powershell
 ipconfig
-py -3.13 -m streamlit run assessment_app_v2.py `
+py -3.13 -m streamlit run assessment_app_v2_mobile.py `
   --server.address 0.0.0.0 `
   --server.port 8501 `
   --server.headless true
@@ -67,7 +76,7 @@ A phone does not connect directly to the Python process as a native mobile app. 
 
 For a public competition demo:
 
-1. deploy the public repository with `assessment_app_v2.py` as the app entrypoint;
+1. deploy the public repository with `assessment_app_v2_mobile.py` or `assessment_app_v2.py` as the app entrypoint;
 2. keep all API keys and private files out of the repository;
 3. use synthetic showcase scenarios only;
 4. disable or avoid real-document uploads on a publicly shared demo unless a separate secure storage and privacy design is implemented;
@@ -93,9 +102,9 @@ Do not split the engine into an API merely for visual polish before the competit
 
 ## Screenshot checklist
 
-Capture both desktop detailed and phone compact modes:
+Capture both desktop detailed and polished phone modes:
 
-- V2 hero and product definition;
+- mobile hero, compact principle pills, and main-page run button;
 - 60-second disposition and KPI strip;
 - top three risk cards;
 - Evidence Drawer open on the highest-ranked risk;
