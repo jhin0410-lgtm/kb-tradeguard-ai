@@ -1,9 +1,9 @@
 """Deterministic release-readiness checks for the competition prototype.
 
 The report verifies repository artifacts, showcase scenarios, presentation snapshots,
-Gold Dataset coverage, public-demo entrypoints, and public-repository safety. It
-performs no network calls and does not change any case, finding, calculation, or
-product candidate.
+Gold Dataset coverage, official-data adapters, extraction-evaluation infrastructure,
+public-demo entrypoints, and public-repository safety. It performs no network calls and
+does not change any case, finding, calculation, or product candidate.
 """
 
 from __future__ import annotations
@@ -44,19 +44,48 @@ _REQUIRED_FILES = [
     "run-mobile-demo.ps1",
     "docs/assessment_demo_app.md",
     "docs/competition_demo_script.md",
+    "docs/document_extraction_evaluation.md",
+    "docs/korea_customs_trade_data.md",
     "docs/public_competition_demo.md",
     "docs/trade_document_gold_dataset.md",
     "docs/ui_v2_mobile.md",
+    "docs/un_comtrade_preview.md",
+    "examples/document_extraction_evaluation_example.json",
     "data/gold/trade_document_gold_v1.json",
     "data/reference/trade_document_rules_v1.json",
+    "scripts/evaluate_document_extraction.py",
     "scripts/public_repo_safety_check.py",
     "scripts/trade_document_gold_summary.py",
     "scripts/live_ai_provider_smoke_test.py",
+    "src/data_providers/kexim_fx.py",
+    "src/data_providers/korea_customs_trade.py",
+    "src/data_providers/un_comtrade.py",
+    "src/data_providers/world_bank_country.py",
+    "src/intelligence/document_extraction_evaluation.py",
 ]
+
+_OFFICIAL_DATA_SURFACES = {
+    "kexim_fx": {
+        "path": "src/data_providers/kexim_fx.py",
+        "requires_secret": True,
+    },
+    "world_bank_country": {
+        "path": "src/data_providers/world_bank_country.py",
+        "requires_secret": False,
+    },
+    "un_comtrade_preview": {
+        "path": "src/data_providers/un_comtrade.py",
+        "requires_secret": False,
+    },
+    "korea_customs_trade": {
+        "path": "src/data_providers/korea_customs_trade.py",
+        "requires_secret": True,
+    },
+}
 
 
 def build_competition_readiness_report() -> dict[str, Any]:
-    """Return a compact, auditable local-readiness report."""
+    """Return a compact, auditable local-readiness report without live API calls."""
 
     failures: list[str] = []
     missing_files = [path for path in _REQUIRED_FILES if not (ROOT / path).exists()]
@@ -83,6 +112,42 @@ def build_competition_readiness_report() -> dict[str, Any]:
     compact_validation = build_competition_validation_status()
     if compact_validation.governed_rule_count != len(governed_rule_ids):
         failures.append("Public demo validation summary does not match the registry")
+
+    official_data_surfaces = []
+    for surface_id, contract in _OFFICIAL_DATA_SURFACES.items():
+        exists = (ROOT / contract["path"]).exists()
+        official_data_surfaces.append(
+            {
+                "surface_id": surface_id,
+                "path": contract["path"],
+                "adapter_present": exists,
+                "requires_deployment_secret": contract["requires_secret"],
+                "network_verified": False,
+            }
+        )
+        if not exists:
+            failures.append(f"Official-data adapter is missing: {surface_id}")
+
+    extraction_evaluation = {
+        "harness_present": (
+            ROOT / "src/intelligence/document_extraction_evaluation.py"
+        ).exists(),
+        "cli_present": (ROOT / "scripts/evaluate_document_extraction.py").exists(),
+        "synthetic_format_example_present": (
+            ROOT / "examples/document_extraction_evaluation_example.json"
+        ).exists(),
+        "external_holdout_in_repository": False,
+        "external_accuracy_claim_allowed": False,
+    }
+    if not all(
+        extraction_evaluation[key]
+        for key in (
+            "harness_present",
+            "cli_present",
+            "synthetic_format_example_present",
+        )
+    ):
+        failures.append("Document-extraction evaluation infrastructure is incomplete")
 
     scenario_results = []
     for metadata in list_demo_scenarios():
@@ -121,15 +186,26 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
 
     return {
-        "report_version": "competition-readiness/1.3",
+        "report_version": "competition-readiness/1.4",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
         "public_demo_entrypoint": "streamlit_app.py",
-        "public_demo_data_mode": "synthetic_showcase_only",
+        "public_demo_data_mode": (
+            "synthetic_transaction_with_read_only_official_context"
+        ),
         "required_file_count": len(_REQUIRED_FILES),
         "missing_files": missing_files,
         "public_repo_safety_status": public_safety["status"],
         "public_repo_safety_finding_count": public_safety["finding_count"],
+        "official_data_surfaces": official_data_surfaces,
+        "no_secret_official_data_surface_count": sum(
+            not item["requires_deployment_secret"] for item in official_data_surfaces
+        ),
+        "secret_required_official_data_surface_count": sum(
+            item["requires_deployment_secret"] for item in official_data_surfaces
+        ),
+        "official_data_network_verified": False,
+        "document_extraction_evaluation": extraction_evaluation,
         "demo_scenario_count": len(scenario_results),
         "scenario_results": scenario_results,
         "gold_dataset_version": dataset["dataset_version"],
@@ -141,9 +217,11 @@ def build_competition_readiness_report() -> dict[str, Any]:
         "unexpected_rule_ids": unexpected_rule_ids,
         "failures": failures,
         "authority_boundary": (
-            "Readiness means the local prototype artifacts and governed deterministic fixtures "
-            "are internally consistent and the current working tree passed the local credential-pattern scan. "
-            "It does not establish repository-history erasure, legal correctness, bank approval, K-SURE "
-            "acceptance, compliance clearance, or production deployment readiness."
+            "Readiness means repository artifacts, deterministic fixtures, official-data adapter "
+            "contracts, and the extraction-evaluation harness are internally consistent, while "
+            "the current working tree passed the local credential-pattern scan. This offline check "
+            "does not prove live API availability, external holdout accuracy, repository-history "
+            "erasure, legal correctness, bank approval, K-SURE acceptance, compliance clearance, "
+            "or production deployment readiness."
         ),
     }
