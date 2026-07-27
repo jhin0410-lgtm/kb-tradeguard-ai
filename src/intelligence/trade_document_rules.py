@@ -1,7 +1,7 @@
 """Deterministic contract and documentary-credit pre-screening rules.
 
 The evaluator consumes only reviewed structured fields and produces grounded
-``ContractClauseFinding`` records.  It does not determine legal enforceability,
+``ContractClauseFinding`` records. It does not determine legal enforceability,
 documentary compliance, bank acceptance, or insurance eligibility.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -200,7 +200,9 @@ def reviewed_terms_from_document(
             "latest_shipment_date": reviewed.get("latest_shipment_date"),
             "presentation_period_days": reviewed.get("presentation_period_days"),
             "governing_rules": (
-                payment.governing_rules if payment is not None else reviewed.get("governing_rules", [])
+                payment.governing_rules
+                if payment is not None
+                else reviewed.get("governing_rules", [])
             ),
             "buyer_controlled_document_requirements": reviewed.get(
                 "buyer_controlled_document_requirements", []
@@ -246,6 +248,36 @@ def _deferred_availability(value: Any) -> bool:
     return _normalized_text(value) in {"usance", "deferred_payment", "acceptance"}
 
 
+def _coerce_reviewed_date(value: Any, field_name: str) -> date | None:
+    """Normalize reviewed JSON date values before deterministic comparison.
+
+    ``reviewed_fields`` intentionally remains an extensible mapping, so package JSON
+    deserialization does not automatically coerce nested ISO date strings. Date rules
+    therefore normalize an ISO ``YYYY-MM-DD`` string at the comparison boundary and
+    fail closed for malformed or unsupported values.
+    """
+
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            return date.fromisoformat(normalized)
+        except ValueError as exc:
+            raise ValueError(
+                f"Reviewed date field {field_name} must use ISO YYYY-MM-DD format"
+            ) from exc
+    raise ValueError(
+        f"Reviewed date field {field_name} must be a date or ISO YYYY-MM-DD string"
+    )
+
+
 def _rule_triggered(rule: TradeDocumentRule, fields: dict[str, Any]) -> bool:
     value = fields.get(rule.field)
     if rule.operator == "missing":
@@ -262,8 +294,10 @@ def _rule_triggered(rule: TradeDocumentRule, fields: dict[str, Any]) -> bool:
         expected = _normalized_text(rule.expected_value)
         return not any(expected in _normalized_text(item) for item in value)
     if rule.operator == "date_before_field":
-        comparison = fields.get(rule.comparison_field or "")
-        return value is not None and comparison is not None and value < comparison
+        comparison_field = rule.comparison_field or ""
+        left = _coerce_reviewed_date(value, rule.field)
+        right = _coerce_reviewed_date(fields.get(comparison_field), comparison_field)
+        return left is not None and right is not None and left < right
     if rule.operator == "buyer_acceptance_without_period":
         trigger = _normalized_text(value) if value is not None else ""
         depends_on_acceptance = "accept" in trigger and (
@@ -399,7 +433,7 @@ def build_document_risk_signals(
     )
     registry = load_trade_document_rule_registry(resolved_path)
     source = _registry_source(registry, resolved_path)
-    signals = []
+    signals: list[TradeRiskSignal] = []
     for finding in findings:
         signals.append(
             TradeRiskSignal(
