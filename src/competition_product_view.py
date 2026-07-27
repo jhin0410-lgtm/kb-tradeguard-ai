@@ -12,6 +12,8 @@ from html import escape
 
 import streamlit as st
 
+from .competition_fx_strategy_view import render_fx_consultation_comparison
+
 
 _STATUS_LABELS = {
     "consultation_candidate": "상담 후보",
@@ -147,27 +149,27 @@ def render_product_consultation_section(run, *, presentation_mode: bool) -> None
     )
     if not cards:
         st.info("현재 Decision Brief에 선택된 상담 후보가 없습니다.")
-        return
+    else:
+        columns = st.columns(min(len(cards), 4))
+        for column, card in zip(columns, cards):
+            unresolved = " / ".join(card.unresolved_conditions) or "현재 공개정보 재확인"
+            needs = " · ".join(card.matched_needs) or "거래 목적"
+            with column:
+                st.markdown(
+                    f"""
+                    <article class="tg-product-card" data-status="{escape(card.status)}">
+                      <small>{escape(card.provider)} · 공식 출처 {card.official_source_count}건</small>
+                      <h3>{escape(card.product_name)}</h3>
+                      <span class="tg-product-status">{escape(card.status_label)}</span>
+                      <p><strong>연결 필요</strong> · {escape(needs)}</p>
+                      <p><strong>확인할 조건</strong> · {escape(unresolved)}</p>
+                      <p><strong>다음 행동</strong> · {escape(card.next_action)}</p>
+                    </article>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-    columns = st.columns(min(len(cards), 4))
-    for column, card in zip(columns, cards):
-        unresolved = " / ".join(card.unresolved_conditions) or "현재 공개정보 재확인"
-        needs = " · ".join(card.matched_needs) or "거래 목적"
-        with column:
-            st.markdown(
-                f"""
-                <article class="tg-product-card" data-status="{escape(card.status)}">
-                  <small>{escape(card.provider)} · 공식 출처 {card.official_source_count}건</small>
-                  <h3>{escape(card.product_name)}</h3>
-                  <span class="tg-product-status">{escape(card.status_label)}</span>
-                  <p><strong>연결 필요</strong> · {escape(needs)}</p>
-                  <p><strong>확인할 조건</strong> · {escape(unresolved)}</p>
-                  <p><strong>다음 행동</strong> · {escape(card.next_action)}</p>
-                </article>
-                """,
-                unsafe_allow_html=True,
-            )
-
+    render_fx_consultation_comparison(run, presentation_mode=presentation_mode)
     if not presentation_mode:
         with st.expander("전체 상담 후보와 공식 조건", expanded=False):
             import assessment_app as detailed
