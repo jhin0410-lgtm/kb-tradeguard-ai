@@ -29,6 +29,18 @@ def test_normalizes_dp_at_sight_without_inventing_tenor():
     assert result.unresolved_fields == []
 
 
+def test_sight_presentation_period_is_not_treated_as_payment_tenor():
+    result = normalize_payment_terms(
+        "L/C available at sight; documents must be presented within 21 days after shipment"
+    )
+
+    assert result.instrument == "letter_of_credit"
+    assert result.availability_type == "sight"
+    assert result.tenor_days is None
+    assert result.tenor_start_event == "unknown"
+    assert result.normalized_trigger == "at sight"
+
+
 def test_normalizes_da_acceptance_and_preserves_missing_details():
     result = normalize_payment_terms("Documents against acceptance (D/A)")
 
@@ -38,6 +50,19 @@ def test_normalizes_da_acceptance_and_preserves_missing_details():
     assert "tenor_days" in " ".join(result.unresolved_fields)
     assert "tenor_start_event" in " ".join(result.unresolved_fields)
     assert "acceptance_party" in " ".join(result.unresolved_fields)
+
+
+def test_explicit_acceptance_precedes_generic_day_count_classification():
+    result = normalize_payment_terms(
+        "Irrevocable L/C available by acceptance at 90 days after B/L date"
+    )
+
+    assert result.instrument == "letter_of_credit"
+    assert result.availability_type == "acceptance"
+    assert result.tenor_days == 90
+    assert result.tenor_start_event == "bill_of_lading_date"
+    assert result.draft_required is True
+    assert any("acceptance_party" in item for item in result.unresolved_fields)
 
 
 def test_normalizes_usance_lc_with_bill_of_lading_anchor():
