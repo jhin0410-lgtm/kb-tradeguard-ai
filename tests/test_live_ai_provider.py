@@ -89,15 +89,24 @@ def test_valid_provider_output_is_locally_validated_and_audited():
         client=client,
     )
 
+    call = client.responses.calls[0]
     assert execution.validation.accepted is True
     assert execution.provider_request_id == "req_test_123"
     assert execution.response.provider_name == "openai"
     assert execution.response.model_name == "gpt-5-mini"
     assert execution.response.decision_status == "explanation_only"
-    assert client.responses.calls[0]["store"] is False
-    assert client.responses.calls[0]["max_output_tokens"] == 600
-    assert "RISK-001" in client.responses.calls[0]["instructions"]
-    assert "deterministic_context" in client.responses.calls[0]["input"]
+    assert call["store"] is False
+    assert call["max_output_tokens"] == 600
+    assert call["text"]["format"]["type"] == "json_schema"
+    assert call["text"]["format"]["strict"] is True
+    assert call["text"]["format"]["name"] == "grounded_live_ai_response"
+    assert set(call["text"]["format"]["schema"]["properties"]) == {
+        "answer_markdown",
+        "cited_reference_ids",
+        "limitations",
+    }
+    assert "RISK-001" in call["instructions"]
+    assert "deterministic_context" in call["input"]
 
 
 def test_unknown_reference_is_rejected_before_display():
