@@ -4,9 +4,10 @@
 
 `assessment_app.py`는 기존의 결정론적 단일 거래 파이프라인을 공모전 시연용 화면으로 연결한다. 앱은 새로운 금융판단을 만들지 않으며, 검토된 Package를 실행하고 이미 생성된 Finding, RiskSignal, Calculation, ProductCandidate, Decision Brief와 Action Plan을 표시한다.
 
-## 실행
+## 설치 및 실행
 
 ```powershell
+py -3.13 -m pip install -r requirements.txt
 streamlit run assessment_app.py
 ```
 
@@ -36,11 +37,26 @@ streamlit run assessment_app.py
 - 상품: KB·K-SURE 상담 후보와 미확인 조건
 - 실행계획: 담당자, 선행 Action, 준비서류, 근거 RiskSignal
 - 감사·다운로드: Markdown, Decision Brief JSON, 전체 ZIP
-- Live AI: Provider 호출 전 Grounding Packet 미리보기
+- Live AI: Grounding Packet 생성, OpenAI 호출, Reference ID 검증
 
-## Live AI 경계
+## OpenAI Live AI 설정
 
-Live AI 기본값은 OFF다. ON으로 전환해도 현재 앱은 외부 모델을 호출하지 않고, 완료된 결정론적 결과에서 다음 정보만 묶어 Grounding Packet을 생성한다.
+Live AI는 기본 OFF이며 결정론적 분석과 다운로드에는 API Key가 필요하지 않다. 실제 호출을 사용할 때 저장소 루트의 `.env.example`을 참고해 PowerShell 환경변수를 설정한다.
+
+```powershell
+$env:OPENAI_API_KEY="사용자 API Key"
+$env:OPENAI_MODEL="gpt-5-mini"
+$env:OPENAI_LIVE_AI_TIMEOUT_SECONDS="45"
+$env:OPENAI_LIVE_AI_MAX_OUTPUT_TOKENS="1400"
+
+streamlit run assessment_app.py
+```
+
+API Key를 코드, JSON Package, Streamlit 업로드 또는 Git commit에 기록하지 않는다. `.env`, `.env.*`, `.streamlit/secrets.toml`은 Git에서 제외된다.
+
+## Live AI 실행 경계
+
+Live AI는 완료된 결정론적 결과에서 다음 정보만 Grounding Packet으로 묶는다.
 
 - Case hash
 - Brief ID
@@ -50,7 +66,16 @@ Live AI 기본값은 OFF다. ON으로 전환해도 현재 앱은 외부 모델�
 - Finding Review
 - 허용된 Reference ID
 
-향후 Provider를 연결할 때 응답은 모든 핵심 문장에 `[REF:<id>]`를 포함해야 한다. 허용목록 밖 ID, 누락된 inline citation, 근거 없는 답변은 `validate_grounded_live_ai_response`에서 거부해야 한다.
+모델은 strict JSON 형태로 `answer_markdown`, `cited_reference_ids`, `limitations`를 반환해야 한다. 답변의 사실·행동 문장은 `[REF:<id>]`를 포함해야 하며 다음 조건 중 하나라도 충족하지 못하면 UI는 답변을 신뢰 결과로 표시하지 않는다.
+
+- 허용목록 밖 Reference ID 사용
+- inline citation과 선언된 ID 불일치
+- citation이 전혀 없음
+- 제한사항 누락
+- JSON 계약 위반
+- API 응답 미완료 또는 빈 응답
+
+Provider 응답은 Case나 Brief를 수정하지 않는다. 검증된 응답도 `decision_status=explanation_only`로 저장되며 Provider request ID, 모델명, 생성시각, 인용 ID와 제한사항을 함께 다운로드할 수 있다.
 
 Live AI는 다음을 할 수 없다.
 
@@ -62,6 +87,16 @@ Live AI는 다음을 할 수 없다.
 - KB 신용승인이나 K-SURE 인수판정
 - 금리·한도·실행조건 확정
 - 누락정보 추정
+
+## 데이터 전송 주의
+
+Live AI 실행 시 Grounding Packet 내용이 설정된 OpenAI API로 전송된다. 실제 고객·계약·은행정보를 사용하기 전 다음을 확인한다.
+
+- 개인정보와 영업비밀 비식별화
+- 회사의 외부 AI 사용정책
+- 데이터 보존 및 접근 정책
+- API Project와 Key 권한
+- 데모에서는 합성 시나리오 우선 사용
 
 ## 감사 ZIP
 
@@ -79,7 +114,7 @@ audit_summary.json
 artifact_manifest.json
 ```
 
-`artifact_manifest.json`은 기존 Package Export가 계산한 파일별 SHA-256과 입력·출력 Case hash를 보존한다.
+`artifact_manifest.json`은 기존 Package Export가 계산한 파일별 SHA-256과 입력·출력 Case hash를 보존한다. 검증된 Live AI 응답은 별도 `validated_live_ai_response.json`으로 내려받으며 결정론적 감사 ZIP의 authoritative artifact로 혼입하지 않는다.
 
 ## 비목표
 
