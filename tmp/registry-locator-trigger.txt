@@ -1,1 +1,0 @@
-Temporary trigger marker for checkout-independent registry locator verification.
