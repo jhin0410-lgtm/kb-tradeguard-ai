@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: one-shot-stale-screening
+  cancel-in-progress: true
+
 jobs:
   patch-and-verify:
     if: github.actor != 'github-actions[bot]'
@@ -91,6 +95,9 @@ jobs:
           test_path.write_text(tests.replace(marker, regression + marker, 1), encoding='utf-8')
           PY
 
+      - name: Remove one-shot workflow from candidate tree
+        run: git rm .github/workflows/one-shot-fix-stale-screening.yml
+
       - name: Install dependencies
         run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
 
@@ -103,12 +110,11 @@ jobs:
           python scripts/competition_readiness_check.py
           git diff --check
 
-      - name: Commit verified fix and remove one-shot workflow
+      - name: Commit verified fix
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .github/workflows/one-shot-fix-stale-screening.yml
           git add src/intelligence/transaction_decision_brief.py tests/test_transaction_decision_brief.py
           git commit -m 'Require fresh compliance screening coverage'
           git push origin HEAD:feature/global-trade-copilot-v2
