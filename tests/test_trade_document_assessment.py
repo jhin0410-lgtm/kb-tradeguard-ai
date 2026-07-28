@@ -191,3 +191,51 @@ def test_registry_upgrade_replaces_prior_version_findings_and_signals():
         item.source.source_id == old_source_id
         for item in updated.trade_finance.risk_signals
     )
+
+
+def test_removed_document_discards_stale_rule_outputs():
+    first, _ = apply_trade_document_screening(_case())
+    removed_domain = first.trade_finance.model_copy(update={"trade_documents": []})
+    removed_case = first.model_copy(update={"trade_finance": removed_domain})
+
+    updated, outcome = apply_trade_document_screening(removed_case)
+
+    assert outcome.evaluated_document_ids == []
+    assert outcome.clause_finding_ids == []
+    assert outcome.risk_signal_ids == []
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.clause_findings
+    )
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.risk_signals
+    )
+    reloaded = UnifiedCopilotCase.model_validate(updated.model_dump(mode="python"))
+    assert reloaded.case_hash == updated.case_hash
+
+
+def test_unsupported_document_type_discards_stale_rule_outputs():
+    first, _ = apply_trade_document_screening(_case())
+    unsupported_documents = [
+        item.model_copy(update={"document_type": "commercial_invoice"})
+        for item in first.trade_finance.trade_documents
+    ]
+    unsupported_domain = first.trade_finance.model_copy(
+        update={"trade_documents": unsupported_documents}
+    )
+    unsupported_case = first.model_copy(update={"trade_finance": unsupported_domain})
+
+    updated, outcome = apply_trade_document_screening(unsupported_case)
+
+    assert outcome.evaluated_document_ids == []
+    assert outcome.clause_finding_ids == []
+    assert outcome.risk_signal_ids == []
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.clause_findings
+    )
+    assert not any(
+        item.source.source_id.startswith("TRADE-DOCUMENT-RULES-")
+        for item in updated.trade_finance.risk_signals
+    )
