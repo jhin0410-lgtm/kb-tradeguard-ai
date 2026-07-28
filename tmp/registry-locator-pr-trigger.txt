@@ -1,0 +1,1 @@
+Trigger checkout-independent registry locator verification.
