@@ -24,6 +24,7 @@ from ..trade_finance_domain import (
     CountryRiskFact,
     ProductCandidate,
     SourceReference,
+    TradeFinanceDomainState,
     TradeRiskSignal,
 )
 
@@ -827,6 +828,15 @@ def build_transaction_decision_brief(
     )
 
 
+def _renumber_action_plan(actions: list[ActionPlanItem]) -> list[ActionPlanItem]:
+    """Return a globally ordered action plan with unique consecutive sequences."""
+
+    return [
+        item.model_copy(update={"sequence": sequence})
+        for sequence, item in enumerate(actions, start=1)
+    ]
+
+
 def apply_transaction_decision_brief(
     case: UnifiedCopilotCase,
     request: TransactionDecisionBriefRequest,
@@ -843,14 +853,20 @@ def apply_transaction_decision_brief(
     retained_actions = [
         item
         for item in case.trade_finance.action_plan
-        if not (
-            item.source.source_id == brief.source.source_id
-            and item.action_id.startswith(f"ACTION-{request.transaction_id}-")
-        )
+        if not item.action_id.startswith(f"ACTION-{request.transaction_id}-")
     ]
-    updated_domain = case.trade_finance.model_copy(
-        update={"action_plan": retained_actions + brief.action_plan}
+    combined_actions = _renumber_action_plan(retained_actions + brief.action_plan)
+    combined_by_id = {item.action_id: item for item in combined_actions}
+    brief = brief.model_copy(
+        update={
+            "action_plan": [
+                combined_by_id[item.action_id] for item in brief.action_plan
+            ]
+        }
     )
+    domain_payload = case.trade_finance.model_dump(mode="python")
+    domain_payload["action_plan"] = combined_actions
+    updated_domain = TradeFinanceDomainState.model_validate(domain_payload)
     updated_case = case.model_copy(update={"trade_finance": updated_domain})
     outcome = TransactionDecisionBriefOutcome(
         case_before_hash=case.case_hash,

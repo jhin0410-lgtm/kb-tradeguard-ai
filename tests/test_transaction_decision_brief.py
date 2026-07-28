@@ -511,6 +511,57 @@ def test_apply_is_immutable_idempotent_and_replaces_current_transaction_actions(
     assert len(second.trade_finance.action_plan) == len(first.trade_finance.action_plan)
 
 
+def test_apply_renumbers_actions_across_transactions_and_revalidates_domain():
+    case = _case()
+    case = case.model_copy(
+        update={
+            "approved_transactions": [
+                *case.approved_transactions,
+                {
+                    "transaction_id": "EXP-002",
+                    "transaction_type": "export",
+                    "currency": "USD",
+                    "amount_fc": 250000,
+                    "expected_date": "2026-12-15",
+                },
+            ]
+        }
+    )
+
+    first, _, _ = apply_transaction_decision_brief(case, _request(case))
+    second_request = _request(
+        first,
+        brief_id="BRIEF-EXP-002",
+        transaction_id="EXP-002",
+        product_candidate_ids=[],
+        consultation_requirement_ids=[],
+    )
+    second, second_brief, _ = apply_transaction_decision_brief(
+        first,
+        second_request,
+    )
+
+    action_plan = second.trade_finance.action_plan
+    assert [item.sequence for item in action_plan] == list(
+        range(1, len(action_plan) + 1)
+    )
+    assert len({item.action_id for item in action_plan}) == len(action_plan)
+    assert any(item.action_id.startswith("ACTION-EXP-001-") for item in action_plan)
+    assert any(item.action_id.startswith("ACTION-EXP-002-") for item in action_plan)
+
+    attached_by_id = {item.action_id: item for item in action_plan}
+    assert all(attached_by_id[item.action_id] == item for item in second_brief.action_plan)
+    reloaded = UnifiedCopilotCase.model_validate(second.model_dump(mode="python"))
+    assert reloaded.case_hash == second.case_hash
+
+    third, third_brief, _ = apply_transaction_decision_brief(
+        second,
+        second_request,
+    )
+    assert third.case_hash == second.case_hash
+    assert third_brief.model_dump(mode="json") == second_brief.model_dump(mode="json")
+
+
 def test_max_ranked_concerns_limits_display_not_disposition_logic():
     case = _case(screening_result="potential_match", screening_type="sanctions")
     brief = build_transaction_decision_brief(
