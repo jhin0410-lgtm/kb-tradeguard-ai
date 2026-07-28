@@ -2,205 +2,58 @@ name: deterministic-verification
 
 on:
   push:
-    branches:
-      - feature/global-trade-copilot-v2
+  pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: one-shot-stale-capacity-cleanup
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  repair-and-verify:
-    if: github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
+  verify:
+    runs-on: windows-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/global-trade-copilot-v2
-          fetch-depth: 1
-          show-progress: false
-
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
           cache: pip
-
-      - name: Apply stale capacity cleanup and regression test
-        shell: bash
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - name: Public repository safety
+        shell: pwsh
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          pipeline_path = Path('src/intelligence/single_transaction_pipeline.py')
-          source = pipeline_path.read_text(encoding='utf-8')
-          helper_name = 'def _clear_transaction_capacity_records('
-          if helper_name not in source:
-              marker = 'def run_single_transaction_assessment(\n'
-              position = source.find(marker)
-              if position < 0:
-                  raise SystemExit('pipeline execution function marker was not found')
-              helper = '''def _clear_transaction_capacity_records(
-              case: UnifiedCopilotCase,
-              transaction_id: str,
-          ) -> tuple[UnifiedCopilotCase, list[str]]:
-              """Remove capacity outputs that are no longer supported by the current run."""
-
-              calculation_ids = {
-                  calculation_id
-                  for calculation_id, calculation in case.calculations.items()
-                  if calculation.calculation_name
-                  == "Transaction financial capacity assessment"
-                  and str(calculation.input_assumptions.get("transaction_id"))
-                  == transaction_id
-              }
-              removed_signal_ids: list[str] = []
-              retained_signals = []
-              for signal in case.trade_finance.risk_signals:
-                  transaction_scoped = transaction_id in signal.affected_transaction_ids
-                  capacity_derived = (
-                      signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
-                      or bool(calculation_ids.intersection(signal.calculation_ids))
-                  )
-                  if transaction_scoped and capacity_derived:
-                      removed_signal_ids.append(signal.signal_id)
-                  else:
-                      retained_signals.append(signal)
-
-              if not calculation_ids and not removed_signal_ids:
-                  return case, []
-
-              calculations = {
-                  calculation_id: calculation
-                  for calculation_id, calculation in case.calculations.items()
-                  if calculation_id not in calculation_ids
-              }
-              domain = case.trade_finance.model_copy(
-                  update={"risk_signals": retained_signals}
-              )
-              updated = case.model_copy(
-                  update={
-                      "calculations": calculations,
-                      "trade_finance": domain,
-                  }
-              )
-              removed_ids = sorted(calculation_ids) + sorted(removed_signal_ids)
-              return updated, removed_ids
-
-
-          '''
-              source = source[:position] + helper + source[position:]
-
-          old = '''    else:
-              traces.append(
-                  _trace(
-                      3,
-                      "transaction_capacity",
-                      "skipped",
-                      before,
-                      before,
-                      reason="No reviewed transaction-capacity request was supplied.",
-                  )
-              )
-          '''
-          new = '''    else:
-              working, removed_capacity_record_ids = _clear_transaction_capacity_records(
-                  working,
-                  request.transaction_id,
-              )
-              traces.append(
-                  _trace(
-                      3,
-                      "transaction_capacity",
-                      "skipped",
-                      before,
-                      working.case_hash,
-                      reason="No reviewed transaction-capacity request was supplied.",
-                      removed_record_ids=removed_capacity_record_ids,
-                  )
-              )
-          '''
-          if old not in source:
-              raise SystemExit('capacity skipped branch was not found')
-          source = source.replace(old, new, 1)
-          pipeline_path.write_text(source, encoding='utf-8')
-
-          test_path = Path('tests/test_single_transaction_pipeline.py')
-          tests = test_path.read_text(encoding='utf-8')
-          test_name = 'def test_rerun_without_capacity_request_clears_prior_capacity_records():'
-          if test_name not in tests:
-              marker = 'def test_pipeline_rejects_multi_transaction_case_before_running_stages():\n'
-              position = tests.find(marker)
-              if position < 0:
-                  raise SystemExit('pipeline test insertion marker was not found')
-              regression = '''def test_rerun_without_capacity_request_clears_prior_capacity_records():
-              first, _ = run_single_transaction_assessment(_full_case(), _request())
-              prior_calculation_ids = {
-                  calculation_id
-                  for calculation_id, calculation in first.calculations.items()
-                  if calculation.calculation_name
-                  == "Transaction financial capacity assessment"
-                  and calculation.input_assumptions.get("transaction_id") == "EXP-001"
-              }
-              prior_signal_ids = {
-                  signal.signal_id
-                  for signal in first.trade_finance.risk_signals
-                  if "EXP-001" in signal.affected_transaction_ids
-                  and signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
-              }
-              assert prior_calculation_ids
-              assert prior_signal_ids
-
-              updated, result = run_single_transaction_assessment(
-                  first,
-                  _request(capacity_request=None),
-              )
-
-              assert not prior_calculation_ids.intersection(updated.calculations)
-              assert not any(
-                  "EXP-001" in signal.affected_transaction_ids
-                  and signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
-                  for signal in updated.trade_finance.risk_signals
-              )
-              capacity_trace = next(
-                  trace
-                  for trace in result.stage_traces
-                  if trace.stage_name == "transaction_capacity"
-              )
-              assert capacity_trace.status == "skipped"
-              assert set(capacity_trace.details["removed_record_ids"]) == (
-                  prior_calculation_ids | prior_signal_ids
-              )
-              assert any(
-                  item.startswith("financial_capacity_calculation")
-                  for item in result.brief.missing_information
-              )
-
-
-          '''
-              tests = tests[:position] + regression + tests[position:]
-              test_path.write_text(tests, encoding='utf-8')
-          PY
-
-      - name: Install dependencies
-        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
-
-      - name: Run focused and full verification
+          python scripts/public_repo_safety_check.py > public_repo_safety_report.json
+          $code = $LASTEXITCODE
+          Get-Content public_repo_safety_report.json
+          exit $code
+      - name: Upload public safety report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-repo-safety-report
+          path: public_repo_safety_report.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - run: python scripts/competition_readiness_check.py
+      - name: Run pytest
+        shell: pwsh
         run: |
-          python -m pytest -q tests/test_single_transaction_pipeline.py
-          python -m pytest -q
-          python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
-          python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
-          git diff --check
-
-      - name: Commit verified repair
-        shell: bash
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/intelligence/single_transaction_pipeline.py tests/test_single_transaction_pipeline.py
-          git commit -m 'Clear stale capacity outputs when stage is skipped'
-          git push origin HEAD:feature/global-trade-copilot-v2
+          python -m pytest -q 2>&1 | Tee-Object -FilePath pytest-output.txt
+          $code = $LASTEXITCODE
+          exit $code
+      - name: Upload pytest output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: pytest-output.txt
+          if-no-files-found: ignore
+          retention-days: 7
+      - run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+      - run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
