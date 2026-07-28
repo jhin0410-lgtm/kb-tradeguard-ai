@@ -29,7 +29,7 @@ from .validators import validate_fx_rates, validate_transactions
 
 ExecutionStatus = Literal["executed", "unsupported"]
 
-_TRANSACTION_SNAPSHOT_COLUMNS = [
+_DELAY_TRANSACTION_COLUMNS = [
     "transaction_id",
     "transaction_type",
     "currency",
@@ -37,9 +37,17 @@ _TRANSACTION_SNAPSHOT_COLUMNS = [
     "probability",
     "status",
     "expected_date",
-    "invoice_date",
 ]
-_FX_SNAPSHOT_COLUMNS = [
+_FX_TRANSACTION_COLUMNS = [
+    "transaction_id",
+    "transaction_type",
+    "currency",
+    "amount_fc",
+    "probability",
+    "status",
+]
+_DELAY_FX_COLUMNS = ["currency", "spot_rate_krw"]
+_HEDGE_FX_COLUMNS = [
     "currency",
     "spot_rate_krw",
     "krw_interest_rate",
@@ -93,54 +101,79 @@ def _normalized_records(
     ]
 
 
-def _normalized_company(company: dict[str, Any]) -> dict[str, Any]:
-    foreign_cash = company.get("foreign_cash") or {}
-    if not isinstance(foreign_cash, dict):
-        raise ValueError("Advisor-tool foreign_cash must be a currency-to-amount mapping.")
-    return {
+def _normalized_company(
+    company: dict[str, Any],
+    *,
+    execution_tool: str,
+) -> dict[str, Any]:
+    normalized: dict[str, Any] = {
         "as_of_date": (
             str(company.get("as_of_date"))[:10]
             if company.get("as_of_date") not in (None, "")
             else None
-        ),
-        "foreign_cash": {
+        )
+    }
+    if execution_tool == "compare_hedge_ratios":
+        foreign_cash = company.get("foreign_cash") or {}
+        if not isinstance(foreign_cash, dict):
+            raise ValueError(
+                "Advisor-tool foreign_cash must be a currency-to-amount mapping."
+            )
+        normalized["foreign_cash"] = {
             str(currency).strip().upper(): float(amount)
             for currency, amount in sorted(foreign_cash.items())
-        },
-        "monthly_fixed_cost_krw": (
+        }
+    elif execution_tool == "run_cashflow_delay_scenario":
+        normalized["monthly_fixed_cost_krw"] = (
             float(company["monthly_fixed_cost_krw"])
             if company.get("monthly_fixed_cost_krw") is not None
             else None
-        ),
-        "current_cash_krw": (
+        )
+        normalized["current_cash_krw"] = (
             float(company["current_cash_krw"])
             if company.get("current_cash_krw") is not None
             else None
-        ),
-    }
+        )
+    else:
+        raise ValueError(
+            f"No advisor-tool snapshot contract is defined for {execution_tool}."
+        )
+    return normalized
+
+
+def _snapshot_columns(execution_tool: str) -> tuple[list[str], list[str]]:
+    if execution_tool == "run_cashflow_delay_scenario":
+        return _DELAY_TRANSACTION_COLUMNS, _DELAY_FX_COLUMNS
+    if execution_tool == "compare_hedge_ratios":
+        return _FX_TRANSACTION_COLUMNS, _HEDGE_FX_COLUMNS
+    raise ValueError(f"No advisor-tool snapshot contract is defined for {execution_tool}.")
 
 
 def _financial_input_fingerprint(
     transactions: pd.DataFrame,
     fx_rates: pd.DataFrame,
     company: dict[str, Any],
+    *,
+    execution_tool: str,
 ) -> str:
     validated_fx = validate_fx_rates(fx_rates.copy(deep=True))
     validated_transactions = validate_transactions(
         transactions.copy(deep=True), validated_fx
     )
+    transaction_columns, fx_columns = _snapshot_columns(execution_tool)
     payload = {
+        "execution_tool": execution_tool,
         "transactions": _normalized_records(
             validated_transactions,
-            _TRANSACTION_SNAPSHOT_COLUMNS,
+            transaction_columns,
             sort_by=["transaction_id"],
         ),
         "fx_rates": _normalized_records(
             validated_fx,
-            _FX_SNAPSHOT_COLUMNS,
+            fx_columns,
             sort_by=["currency"],
         ),
-        "company": _normalized_company(company),
+        "company": _normalized_company(company, execution_tool=execution_tool),
     }
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
@@ -266,17 +299,23 @@ class GovernedScenarioExecutor:
         )
         return updated, outcome
 
-    def _assert_tools_match_case(self, case: UnifiedCopilotCase) -> None:
+    def _assert_tools_match_case(
+        self,
+        case: UnifiedCopilotCase,
+        execution_tool: str,
+    ) -> None:
         case_transactions, case_fx_rates, case_company = _case_financial_inputs(case)
         case_fingerprint = _financial_input_fingerprint(
             case_transactions,
             case_fx_rates,
             case_company,
+            execution_tool=execution_tool,
         )
         tool_fingerprint = _financial_input_fingerprint(
             self._tools._transactions,
             self._tools._fx_rates,
             self._tools._company,
+            execution_tool=execution_tool,
         )
         if case_fingerprint != tool_fingerprint:
             raise ValueError(
@@ -293,7 +332,7 @@ class GovernedScenarioExecutor:
             "run_cashflow_delay_scenario",
             "compare_hedge_ratios",
         }:
-            self._assert_tools_match_case(case)
+            self._assert_tools_match_case(case, request.execution_tool)
 
         if request.execution_tool == "run_cashflow_delay_scenario":
             if len(request.target_transaction_ids) != 1:
