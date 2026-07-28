@@ -47,12 +47,26 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
       - name: Run focused product tests
-        run: >-
-          python -m pytest -q
-          tests/test_product_matching.py
-          tests/test_portfolio_assessment.py
-          tests/test_official_data_hub.py
-          tests/test_competition_portfolio_view.py
+        id: focused
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python -m pytest -q tests/test_product_matching.py tests/test_portfolio_assessment.py tests/test_official_data_hub.py tests/test_competition_portfolio_view.py *> focused-tests.log
+          exit $LASTEXITCODE
+      - name: Upload focused-test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-focused-test-diagnostics
+          path: focused-tests.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Stop after focused-test failure
+        if: steps.focused.outcome == 'failure'
+        shell: pwsh
+        run: |
+          Get-Content focused-tests.log -Tail 40
+          exit 1
       - name: Run full tests except temporary repository-state readiness gate
         run: python -m pytest -q --ignore=tests/test_competition_readiness.py
       - name: Compile
