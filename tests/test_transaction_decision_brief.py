@@ -361,6 +361,39 @@ def test_missing_minimum_coverage_is_not_misreported_as_low_risk():
     )
 
 
+def test_stale_clear_screening_requires_refresh_before_favorable_disposition():
+    case = _case(
+        include_high_signals=False,
+        counterparty_status="professional_credit_investigation_completed",
+    )
+    stale_screening = case.trade_finance.compliance_screenings[0].model_copy(
+        update={"record_status": "stale"}
+    )
+    case = case.model_copy(
+        update={
+            "trade_finance": case.trade_finance.model_copy(
+                update={
+                    "country_risk_facts": [
+                        case.trade_finance.country_risk_facts[0]
+                    ],
+                    "compliance_screenings": [
+                        stale_screening,
+                        *case.trade_finance.compliance_screenings[1:],
+                    ],
+                }
+            )
+        }
+    )
+
+    brief = build_transaction_decision_brief(case, _request(case))
+
+    assert brief.disposition == "additional_information_required"
+    assert any(
+        item.startswith("compliance_screening") and "stale" in item
+        for item in brief.missing_information
+    )
+
+
 def test_complete_clear_case_returns_no_material_flags_with_explicit_limitation():
     case = _case(
         include_high_signals=False,

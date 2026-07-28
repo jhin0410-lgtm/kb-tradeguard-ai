@@ -298,6 +298,10 @@ def _coverage_gaps(
         gaps.append("country_context: all selected country facts are stale")
     if not screenings:
         gaps.append("compliance_screening: no related country or counterparty screening is attached")
+    elif any(item.record_status == "stale" for item in screenings):
+        gaps.append(
+            "compliance_screening: at least one related screening is stale and must be refreshed"
+        )
     elif any(item.result == "not_screened" for item in screenings):
         gaps.append("compliance_screening: at least one related subject remains not screened")
     if not any(
