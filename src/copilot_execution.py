@@ -7,8 +7,12 @@ financial result outside governed deterministic executors.
 
 from __future__ import annotations
 
-from typing import Literal
+import hashlib
+import json
+from datetime import date
+from typing import Any, Literal
 
+import pandas as pd
 from pydantic import BaseModel, Field
 
 from .advisor_models import CalculationResult
@@ -21,8 +25,26 @@ from .copilot_scenarios import (
     ScenarioExecutionRequest,
     build_execution_request,
 )
+from .validators import validate_fx_rates, validate_transactions
 
 ExecutionStatus = Literal["executed", "unsupported"]
+
+_TRANSACTION_SNAPSHOT_COLUMNS = [
+    "transaction_id",
+    "transaction_type",
+    "currency",
+    "amount_fc",
+    "probability",
+    "status",
+    "expected_date",
+    "invoice_date",
+]
+_FX_SNAPSHOT_COLUMNS = [
+    "currency",
+    "spot_rate_krw",
+    "krw_interest_rate",
+    "foreign_interest_rate",
+]
 
 
 class ScenarioExecutionOutcome(BaseModel):
@@ -33,6 +55,144 @@ class ScenarioExecutionOutcome(BaseModel):
     case_before_hash: str
     case_after_hash: str
     limitations: list[str] = Field(default_factory=list)
+
+
+def _normalized_scalar(value: Any) -> Any:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, pd.Timestamp):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        value = value.item()
+    if isinstance(value, float):
+        return float(value)
+    return value
+
+
+def _normalized_records(
+    frame: pd.DataFrame,
+    columns: list[str],
+    *,
+    sort_by: list[str],
+) -> list[dict[str, Any]]:
+    normalized = frame.copy(deep=True)
+    for column in columns:
+        if column not in normalized.columns:
+            normalized[column] = None
+    normalized = normalized.loc[:, columns].sort_values(sort_by).reset_index(drop=True)
+    return [
+        {key: _normalized_scalar(value) for key, value in row.items()}
+        for row in normalized.to_dict("records")
+    ]
+
+
+def _normalized_company(company: dict[str, Any]) -> dict[str, Any]:
+    foreign_cash = company.get("foreign_cash") or {}
+    if not isinstance(foreign_cash, dict):
+        raise ValueError("Advisor-tool foreign_cash must be a currency-to-amount mapping.")
+    return {
+        "as_of_date": (
+            str(company.get("as_of_date"))[:10]
+            if company.get("as_of_date") not in (None, "")
+            else None
+        ),
+        "foreign_cash": {
+            str(currency).strip().upper(): float(amount)
+            for currency, amount in sorted(foreign_cash.items())
+        },
+        "monthly_fixed_cost_krw": (
+            float(company["monthly_fixed_cost_krw"])
+            if company.get("monthly_fixed_cost_krw") is not None
+            else None
+        ),
+        "current_cash_krw": (
+            float(company["current_cash_krw"])
+            if company.get("current_cash_krw") is not None
+            else None
+        ),
+    }
+
+
+def _financial_input_fingerprint(
+    transactions: pd.DataFrame,
+    fx_rates: pd.DataFrame,
+    company: dict[str, Any],
+) -> str:
+    validated_fx = validate_fx_rates(fx_rates.copy(deep=True))
+    validated_transactions = validate_transactions(
+        transactions.copy(deep=True), validated_fx
+    )
+    payload = {
+        "transactions": _normalized_records(
+            validated_transactions,
+            _TRANSACTION_SNAPSHOT_COLUMNS,
+            sort_by=["transaction_id"],
+        ),
+        "fx_rates": _normalized_records(
+            validated_fx,
+            _FX_SNAPSHOT_COLUMNS,
+            sort_by=["currency"],
+        ),
+        "company": _normalized_company(company),
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+
+
+def _case_financial_inputs(
+    case: UnifiedCopilotCase,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    if case.official_fx_reference is None or case.official_fx_reference.payload is None:
+        raise ValueError(
+            "Execution case must include the FX-reference payload used by advisor tools."
+        )
+    fx_payload = case.official_fx_reference.payload
+    if isinstance(fx_payload, dict):
+        fx_records = [fx_payload]
+    else:
+        fx_records = fx_payload
+
+    foreign_cash: dict[str, float] = {}
+    for row in case.foreign_cash_positions:
+        currency = str(row.get("currency") or "").strip().upper()
+        if not currency:
+            raise ValueError("Execution case contains a foreign-cash row without currency.")
+        if currency in foreign_cash:
+            raise ValueError(
+                f"Execution case contains duplicate foreign-cash currency: {currency}"
+            )
+        amount = row.get("amount_fc")
+        if amount is None:
+            raise ValueError(
+                f"Execution case foreign-cash amount is missing for currency: {currency}"
+            )
+        foreign_cash[currency] = float(amount)
+
+    company = {
+        "as_of_date": (
+            case.identity.analysis_as_of_date.isoformat()
+            if case.identity.analysis_as_of_date
+            else None
+        ),
+        "foreign_cash": foreign_cash,
+        "monthly_fixed_cost_krw": case.monthly_cost_assumptions.get(
+            "monthly_fixed_cost_krw"
+        ),
+        "current_cash_krw": case.monthly_cost_assumptions.get("current_cash_krw"),
+    }
+    return (
+        pd.DataFrame(case.approved_transactions),
+        pd.DataFrame(fx_records),
+        company,
+    )
 
 
 def _replace_scenario(
@@ -106,11 +266,35 @@ class GovernedScenarioExecutor:
         )
         return updated, outcome
 
+    def _assert_tools_match_case(self, case: UnifiedCopilotCase) -> None:
+        case_transactions, case_fx_rates, case_company = _case_financial_inputs(case)
+        case_fingerprint = _financial_input_fingerprint(
+            case_transactions,
+            case_fx_rates,
+            case_company,
+        )
+        tool_fingerprint = _financial_input_fingerprint(
+            self._tools._transactions,
+            self._tools._fx_rates,
+            self._tools._company,
+        )
+        if case_fingerprint != tool_fingerprint:
+            raise ValueError(
+                "Advisor-tool input snapshot does not match the execution case; "
+                "rebuild ReadOnlyAdvisorTools from the current case before execution."
+            )
+
     def _dispatch(
         self,
         case: UnifiedCopilotCase,
         request: ScenarioExecutionRequest,
     ) -> list[CalculationResult]:
+        if request.execution_tool in {
+            "run_cashflow_delay_scenario",
+            "compare_hedge_ratios",
+        }:
+            self._assert_tools_match_case(case)
+
         if request.execution_tool == "run_cashflow_delay_scenario":
             if len(request.target_transaction_ids) != 1:
                 raise ValueError(
