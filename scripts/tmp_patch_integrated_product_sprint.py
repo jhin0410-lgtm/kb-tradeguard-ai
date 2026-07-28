@@ -37,6 +37,15 @@ text = text.replace(
 )
 portfolio_test.write_text(text, encoding="utf-8")
 
+# Recognize the common banking notation L/C as a letter-of-credit payment method.
+portfolio_source = ROOT / "src/intelligence/portfolio_assessment.py"
+text = portfolio_source.read_text(encoding="utf-8")
+text = text.replace(
+    'if "lc" in payment or "letter of credit" in payment or "신용장" in payment:',
+    'if "lc" in payment or "l/c" in payment or "letter of credit" in payment or "신용장" in payment:',
+)
+portfolio_source.write_text(text, encoding="utf-8")
+
 patch_payload = "".join(
     (ROOT / f"tmp/integrated_patch_script_{index:02d}.b64").read_text(encoding="utf-8")
     for index in range(2)
