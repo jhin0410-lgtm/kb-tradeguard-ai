@@ -21,7 +21,14 @@ jobs:
         with:
           python-version: '3.13'
       - name: Apply integrated product sprint
-        run: python scripts/tmp_patch_integrated_product_sprint.py
+        shell: pwsh
+        run: |
+          python scripts/tmp_patch_integrated_product_sprint.py *> integrated-patch.log
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content integrated-patch.log -Tail 80
+            exit $LASTEXITCODE
+          }
+          Get-Content integrated-patch.log -Tail 20
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
