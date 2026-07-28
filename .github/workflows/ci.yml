@@ -20,7 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: feature/global-trade-copilot-v2
+          fetch-depth: 1
+          show-progress: false
 
       - uses: actions/setup-python@v5
         with:
@@ -35,30 +37,31 @@ jobs:
 
           source_path = Path('src/intelligence/transaction_decision_brief.py')
           source = source_path.read_text(encoding='utf-8')
-          old = '''    if not screenings:
-              gaps.append("compliance_screening: no related country or counterparty screening is attached")
-          elif any(item.result == "not_screened" for item in screenings):
-              gaps.append("compliance_screening: at least one related subject remains not screened")
-          '''
-          new = '''    if not screenings:
-              gaps.append("compliance_screening: no related country or counterparty screening is attached")
-          elif any(item.record_status == "stale" for item in screenings):
-              gaps.append(
-                  "compliance_screening: at least one related screening is stale and must be refreshed"
-              )
-          elif any(item.result == "not_screened" for item in screenings):
-              gaps.append("compliance_screening: at least one related subject remains not screened")
-          '''
-          print(f'coverage block found: {old in source}')
-          if old not in source:
-              raise SystemExit('Expected compliance coverage block was not found')
-          source_path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          if 'item.record_status == "stale" for item in screenings' not in source:
+              lines = source.splitlines(keepends=True)
+              needle = '    elif any(item.result == "not_screened" for item in screenings):\n'
+              try:
+                  index = lines.index(needle)
+              except ValueError as exc:
+                  raise SystemExit('not_screened coverage branch was not found') from exc
+              lines[index:index] = [
+                  '    elif any(item.record_status == "stale" for item in screenings):\n',
+                  '        gaps.append(\n',
+                  '            "compliance_screening: at least one related screening is stale and must be refreshed"\n',
+                  '        )\n',
+              ]
+              source_path.write_text(''.join(lines), encoding='utf-8')
+          print('stale screening coverage branch present')
 
           test_path = Path('tests/test_transaction_decision_brief.py')
           tests = test_path.read_text(encoding='utf-8')
-          marker = '''def test_complete_clear_case_returns_no_material_flags_with_explicit_limitation():
-          '''
-          regression = '''def test_stale_clear_screening_requires_refresh_before_favorable_disposition():
+          test_name = 'def test_stale_clear_screening_requires_refresh_before_favorable_disposition():'
+          if test_name not in tests:
+              marker = 'def test_complete_clear_case_returns_no_material_flags_with_explicit_limitation():'
+              position = tests.find(marker)
+              if position < 0:
+                  raise SystemExit('clear-case test insertion point was not found')
+              regression = '''def test_stale_clear_screening_requires_refresh_before_favorable_disposition():
               case = _case(
                   include_high_signals=False,
                   counterparty_status="professional_credit_investigation_completed",
@@ -92,13 +95,15 @@ jobs:
 
 
           '''
-          print(f'test marker found: {marker in tests}')
-          if regression in tests:
-              raise SystemExit('Regression test already exists')
-          if marker not in tests:
-              raise SystemExit('Expected test insertion marker was not found')
-          test_path.write_text(tests.replace(marker, regression + marker, 1), encoding='utf-8')
+              test_path.write_text(
+                  tests[:position] + regression + tests[position:],
+                  encoding='utf-8',
+              )
+          print('stale screening regression test present')
           PY
+
+      - name: Compile patched files
+        run: python -m compileall -q src/intelligence/transaction_decision_brief.py tests/test_transaction_decision_brief.py
 
       - name: Install dependencies
         run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
