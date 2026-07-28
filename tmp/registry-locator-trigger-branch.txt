@@ -1,0 +1,1 @@
+Temporary seed for nested registry locator verification.
