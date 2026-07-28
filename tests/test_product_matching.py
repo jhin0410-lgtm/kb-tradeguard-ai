@@ -63,8 +63,8 @@ def _by_product(result):
 def test_product_registry_has_unique_products_and_valid_source_links():
     registry = load_product_registry()
 
-    assert registry.registry_version == "trade-finance-products/1.0"
-    assert len(registry.products) == 10
+    assert registry.registry_version == "trade-finance-products/2.0"
+    assert len(registry.products) == 21
     assert len({item.product_id for item in registry.products}) == len(registry.products)
     assert "does not determine eligibility" in registry.authority_boundary
 
@@ -264,3 +264,17 @@ def test_product_outputs_preserve_transaction_linkage():
         item.linked_transaction_ids == ["EXP-LINK-001"]
         for item in result.consultation_requirements
     )
+
+def test_v2_registry_covers_kb_trade_fx_and_import_product_families():
+    registry = load_product_registry()
+    names = {item.product_name for item in registry.products}
+
+    assert {
+        "KB Payment Usance",
+        "KB 수입신용장 개설 상담",
+        "KB 수출환어음 매입·추심 상담",
+        "KB 무역금융 상담",
+        "KB 선물환 거래 상담",
+        "KB 글로벌구매론 상담",
+    }.issubset(names)
+    assert all(item.official_source_ids for item in registry.products)

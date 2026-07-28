@@ -30,6 +30,18 @@ _NEED_LABELS = {
     "import_working_capital": "수입 운전자금",
     "import_advance_payment_protection": "수입 선급금 위험 보호",
     "export_working_capital": "수출 운전자금",
+    "import_usance_financing": "기한부 수입결제 금융",
+    "import_letter_of_credit": "수입신용장 개설",
+    "export_letter_of_credit_advising": "수출신용장 통지·조건검토",
+    "export_bill_negotiation": "수출환어음 매입",
+    "domestic_letter_of_credit": "내국신용장",
+    "trade_finance_working_capital": "무역금융 운전자금",
+    "foreign_currency_payment_guarantee": "외화지급보증",
+    "forward_exchange_hedging": "선물환 헤지",
+    "fx_order_management": "목표환율 주문관리",
+    "supply_chain_payment_finance": "공급망 구매자금",
+    "export_support_program": "수출기업 우대지원",
+    "trade_receivable_collection": "수출채권 추심",
 }
 _STATUS_PRIORITY = {
     "consultation_candidate": 0,

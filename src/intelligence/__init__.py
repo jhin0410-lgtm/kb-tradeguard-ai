@@ -42,6 +42,18 @@ from .live_ai_provider import (
     run_grounded_openai_live_ai,
 )
 from .payment_terms import NormalizedPaymentTerms, normalize_payment_terms
+from .portfolio_assessment import (
+    CompanyPortfolioWorkspace,
+    CurrencyExposure,
+    LiquidityBucket,
+    PortfolioAssessment,
+    PortfolioStressPoint,
+    PortfolioTransaction,
+    analyze_trade_portfolio,
+    extract_reference_rates,
+    infer_portfolio_need_profiles,
+    match_portfolio_products,
+)
 from .product_matching import (
     ProductMatchingOutcome,
     ProductMatchingResult,
@@ -103,6 +115,8 @@ from .transaction_decision_brief import (
 )
 
 __all__ = [
+    "CompanyPortfolioWorkspace",
+    "CurrencyExposure",
     "DecisionConcern",
     "DocumentComparisonResult",
     "DocumentReconciliationOutcome",
@@ -117,10 +131,14 @@ __all__ = [
     "GroundedLiveAiResponse",
     "GroundedLiveAiValidation",
     "LiveAiProviderError",
+    "LiquidityBucket",
     "NormalizedPaymentTerms",
     "OpenAiLiveAiSettings",
     "PipelineStageTrace",
     "ProductMatchingOutcome",
+    "PortfolioAssessment",
+    "PortfolioStressPoint",
+    "PortfolioTransaction",
     "ProductMatchingResult",
     "ReconciliationPolicy",
     "SingleTransactionAssessmentPackage",
@@ -140,6 +158,7 @@ __all__ = [
     "TransactionDecisionBriefOutcome",
     "TransactionDecisionBriefRequest",
     "analyze_financial_health",
+    "analyze_trade_portfolio",
     "analyze_financial_trends",
     "analyze_transaction_capacity",
     "apply_document_reconciliation",
@@ -158,7 +177,9 @@ __all__ = [
     "canonical_bank_name",
     "evaluate_trade_document",
     "export_single_transaction_package_run",
+    "extract_reference_rates",
     "finding_review_summary",
+    "infer_portfolio_need_profiles",
     "iter_semantic_preserving_gold_mutations",
     "latest_finding_review_decisions",
     "list_trade_document_gold_cases",
@@ -171,6 +192,7 @@ __all__ = [
     "load_trade_document_rule_registry",
     "load_transaction_capacity_registry",
     "load_transaction_decision_brief_registry",
+    "match_portfolio_products",
     "match_trade_finance_products",
     "normalize_payment_terms",
     "openai_live_ai_is_configured",

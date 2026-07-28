@@ -23,6 +23,9 @@ from src.assessment_app_v2 import (
     build_risk_first_summary,
     render_presentation_snapshot_html,
 )
+from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
+from src.competition_product_view import render_product_consultation_section
+from src.competition_real_data_view import render_official_data_section
 from src.competition_demo import (
     build_competition_validation_status,
     build_public_demo_qr_png,
@@ -210,7 +213,7 @@ def _render_hero() -> None:
           <div>
             <small>KB TRADEGUARD AI · 공모전 공개 데모</small>
             <h1>거래 확정 전에 핵심 위험과 다음 행동을 확인합니다</h1>
-            <p>기업·거래·바이어·국가·계약조건을 하나의 결정론적 거래 검토 요약으로 연결하고, 모든 핵심 판단을 근거 ID와 감사 식별자로 추적합니다.</p>
+            <p>기업·여러 수출입 거래·공식 데이터·문서·환노출·금융지원 후보를 하나의 검토 흐름으로 연결하고, 모든 핵심 판단을 근거 ID와 감사 식별자로 추적합니다.</p>
           </div>
           <div class="tg-hero-side">
             <div class="tg-hero-chip"><strong>핵심 위험 우선</strong><span>총점 대신 상위 위험과 사실 근거 표시</span></div>
@@ -374,7 +377,7 @@ def _render_qr() -> None:
 
 def _render_audit(run, scenario_id: str) -> None:
     st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">04 · 검증 현황과 감사 Snapshot</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">07 · 검증 현황과 감사 Snapshot</div>', unsafe_allow_html=True)
     _render_validation_status()
     st.divider()
     snapshot = build_presentation_snapshot_v2(run, scenario_id=scenario_id)
@@ -412,6 +415,9 @@ def _render_bottom_nav() -> None:
           <a href="#summary" target="_self">요약</a>
           <a href="#evidence" target="_self">근거</a>
           <a href="#actions" target="_self">실행</a>
+          <a href="#portfolio" target="_self">포트폴리오</a>
+          <a href="#products" target="_self">금융지원</a>
+          <a href="#data" target="_self">공식데이터</a>
           <a href="#audit" target="_self">감사</a>
         </nav>
         """,
@@ -431,6 +437,7 @@ def main() -> None:
     st.markdown(detailed.APP_CSS + v2.V2_CSS + COMPETITION_CSS, unsafe_allow_html=True)
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     _render_hero()
+    render_workflow_map()
 
     scenario_id = _query_scenario_id()
     if not presentation_mode:
@@ -443,6 +450,9 @@ def main() -> None:
     _render_verdict(run)
     _render_risks(run, presentation_mode=presentation_mode)
     _render_actions(run, presentation_mode=presentation_mode)
+    render_portfolio_section(presentation_mode=presentation_mode)
+    render_product_consultation_section(run, presentation_mode=presentation_mode)
+    render_official_data_section(presentation_mode=presentation_mode)
     if not presentation_mode:
         _render_audit(run, scenario_id)
         _render_bottom_nav()

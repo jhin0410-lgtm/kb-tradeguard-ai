@@ -15,6 +15,9 @@ from .assessment_app_presentation import build_presentation_snapshot, scenario_n
 from .assessment_app_v2 import build_presentation_snapshot_v2
 from .competition_demo import build_competition_validation_status
 from .demo_scenarios import list_demo_scenarios, load_demo_scenario
+from .portfolio_demo import build_demo_company_workspace
+from .intelligence.portfolio_assessment import analyze_trade_portfolio, match_portfolio_products
+from .intelligence.product_matching import load_product_registry
 from .intelligence.single_transaction_package import run_single_transaction_package
 from .intelligence.trade_document_gold import (
     iter_semantic_preserving_gold_mutations,
@@ -53,6 +56,7 @@ _REQUIRED_FILES = [
     "examples/document_extraction_evaluation_example.json",
     "data/gold/trade_document_gold_v1.json",
     "data/reference/trade_document_rules_v1.json",
+    "data/reference/trade_finance_product_registry_v2.json",
     "scripts/evaluate_document_extraction.py",
     "scripts/public_repo_safety_check.py",
     "scripts/trade_document_gold_summary.py",
@@ -61,6 +65,15 @@ _REQUIRED_FILES = [
     "src/data_providers/korea_customs_trade.py",
     "src/data_providers/un_comtrade.py",
     "src/data_providers/world_bank_country.py",
+    "src/data_providers/bok_ecos.py",
+    "src/data_providers/nts_business.py",
+    "src/data_providers/opendart.py",
+    "src/official_data_hub.py",
+    "src/intelligence/portfolio_assessment.py",
+    "src/portfolio_demo.py",
+    "src/competition_portfolio_view.py",
+    "docs/portfolio_assessment.md",
+    "docs/official_data_hub.md",
     "src/intelligence/document_extraction_evaluation.py",
 ]
 
@@ -79,6 +92,18 @@ _OFFICIAL_DATA_SURFACES = {
     },
     "korea_customs_trade": {
         "path": "src/data_providers/korea_customs_trade.py",
+        "requires_secret": True,
+    },
+    "nts_business_status": {
+        "path": "src/data_providers/nts_business.py",
+        "requires_secret": True,
+    },
+    "opendart_company_financials": {
+        "path": "src/data_providers/opendart.py",
+        "requires_secret": True,
+    },
+    "bok_ecos": {
+        "path": "src/data_providers/bok_ecos.py",
         "requires_secret": True,
     },
 }
@@ -127,6 +152,30 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
         if not exists:
             failures.append(f"Official-data adapter is missing: {surface_id}")
+
+    product_registry = load_product_registry()
+    if len(product_registry.products) < 20:
+        failures.append("Trade-finance product registry does not cover the governed minimum")
+
+    portfolio_workspace = build_demo_company_workspace()
+    portfolio_results = []
+    for company_id, portfolio_case in portfolio_workspace.companies.items():
+        assessment = analyze_trade_portfolio(portfolio_case)
+        _, product_matches = match_portfolio_products(portfolio_case)
+        if assessment.transaction_count < 2:
+            failures.append(f"Portfolio demo {company_id} is not multi-transaction")
+        if not product_matches.product_candidates:
+            failures.append(f"Portfolio demo {company_id} has no product candidates")
+        portfolio_results.append(
+            {
+                "company_id": company_id,
+                "case_id": portfolio_case.identity.case_id,
+                "transaction_count": assessment.transaction_count,
+                "currency_count": assessment.currency_count,
+                "product_candidate_count": len(product_matches.product_candidates),
+                "missing_inputs": assessment.missing_inputs,
+            }
+        )
 
     extraction_evaluation = {
         "harness_present": (
@@ -186,12 +235,12 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
 
     return {
-        "report_version": "competition-readiness/1.4",
+        "report_version": "competition-readiness/1.5",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
         "public_demo_entrypoint": "streamlit_app.py",
         "public_demo_data_mode": (
-            "synthetic_transaction_with_read_only_official_context"
+            "synthetic_transaction_and_portfolio_with_read_only_official_context"
         ),
         "required_file_count": len(_REQUIRED_FILES),
         "missing_files": missing_files,
@@ -205,6 +254,10 @@ def build_competition_readiness_report() -> dict[str, Any]:
             item["requires_deployment_secret"] for item in official_data_surfaces
         ),
         "official_data_network_verified": False,
+        "product_registry_version": product_registry.registry_version,
+        "product_registry_product_count": len(product_registry.products),
+        "portfolio_company_count": len(portfolio_results),
+        "portfolio_results": portfolio_results,
         "document_extraction_evaluation": extraction_evaluation,
         "demo_scenario_count": len(scenario_results),
         "scenario_results": scenario_results,

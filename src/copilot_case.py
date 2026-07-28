@@ -19,7 +19,7 @@ from .advisor_models import CalculationResult
 from .copilot_planning import CaseCapabilities
 from .trade_finance_domain import TradeFinanceDomainState
 
-CaseDataStatus = Literal["available", "partial", "missing", "not_applicable"]
+CaseDataStatus = Literal["available", "partial", "stale", "missing", "not_applicable"]
 ScenarioStatus = Literal["proposed", "approved", "executed", "rejected"]
 EvidenceStatus = Literal["approved", "review_required", "invalid"]
 FindingReviewStatus = Literal["confirmed", "dismissed", "needs_more_information"]
@@ -152,6 +152,7 @@ class UnifiedCopilotCase(BaseModel):
     official_fx_reference: CaseDataAsset | None = None
     financial_context: CaseDataAsset | None = None
     policy_context: CaseDataAsset | None = None
+    official_data_assets: dict[str, CaseDataAsset] = Field(default_factory=dict)
     trade_finance: TradeFinanceDomainState = Field(default_factory=TradeFinanceDomainState)
     calculations: dict[str, CalculationResult] = Field(default_factory=dict)
     scenarios: list[CaseScenario] = Field(default_factory=list)
@@ -222,6 +223,8 @@ class UnifiedCopilotCase(BaseModel):
             result.pop("calculation_timestamp", None)
         if not payload.get("finding_reviews"):
             payload.pop("finding_reviews", None)
+        if not payload.get("official_data_assets"):
+            payload.pop("official_data_assets", None)
         return payload
 
     @property
@@ -253,6 +256,8 @@ class UnifiedCopilotCase(BaseModel):
             "capabilities": self.capabilities.model_dump(),
             "trade_finance_domain_version": self.trade_finance.domain_version,
             "trade_finance_record_counts": self.trade_finance.record_counts(),
+            "official_data_asset_count": len(self.official_data_assets),
+            "official_data_asset_keys": sorted(self.official_data_assets),
             "authority_boundary": (
                 "Financial arithmetic remains authoritative only in deterministic "
                 "engines. AI may plan, reconcile, and explain with cited evidence."

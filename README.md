@@ -267,3 +267,7 @@ Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는
 원본 코드와 프로젝트 작성 문서는 별도 표기가 없는 한 `LICENSE`의 MIT License를 따릅니다. 제3자 상표·출판물·데이터의 권리는 각 권리자에게 있으며, 상세 고지사항은 `NOTICE.md`에 정리되어 있습니다.
 
 취약점 또는 실수로 노출된 비밀정보는 공개 Issue에 게시하지 말고 `SECURITY.md`의 신고·회전 절차를 따르십시오.
+
+## Portfolio and official-data v2
+
+The competition prototype now includes a deterministic single-company, multi-transaction portfolio layer, a reviewed 21-item trade-finance product registry, and a unified read-only hub for seven official-data adapters. The public workflow follows company → transactions → official data → risk/scenario → financial support → action plan. Multi-company switching remains an isolated synthetic demonstration surface rather than a production multi-tenant boundary.

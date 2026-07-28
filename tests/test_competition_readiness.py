@@ -4,17 +4,22 @@ from src.competition_readiness import build_competition_readiness_report
 def test_competition_readiness_report_is_complete_and_deterministic():
     report = build_competition_readiness_report()
 
-    assert report["report_version"] == "competition-readiness/1.4"
+    assert report["report_version"] == "competition-readiness/1.5"
     assert report["status"] == "ready"
     assert report["network_calls"] == "none"
     assert report["public_demo_entrypoint"] == "streamlit_app.py"
-    assert report["public_demo_data_mode"] == "synthetic_transaction_with_read_only_official_context"
+    assert report["public_demo_data_mode"] == "synthetic_transaction_and_portfolio_with_read_only_official_context"
     assert report["missing_files"] == []
     assert report["public_repo_safety_status"] == "safe"
     assert report["public_repo_safety_finding_count"] == 0
     assert report["no_secret_official_data_surface_count"] == 2
-    assert report["secret_required_official_data_surface_count"] == 2
+    assert report["secret_required_official_data_surface_count"] == 5
     assert report["official_data_network_verified"] is False
+    assert report["product_registry_version"] == "trade-finance-products/2.0"
+    assert report["product_registry_product_count"] == 21
+    assert report["portfolio_company_count"] == 2
+    assert all(item["transaction_count"] >= 2 for item in report["portfolio_results"])
+    assert all(item["product_candidate_count"] > 0 for item in report["portfolio_results"])
     assert all(item["adapter_present"] for item in report["official_data_surfaces"])
 
     extraction = report["document_extraction_evaluation"]

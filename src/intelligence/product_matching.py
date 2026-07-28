@@ -33,6 +33,18 @@ NeedCode = Literal[
     "import_working_capital",
     "import_advance_payment_protection",
     "export_working_capital",
+    "import_usance_financing",
+    "import_letter_of_credit",
+    "export_letter_of_credit_advising",
+    "export_bill_negotiation",
+    "domestic_letter_of_credit",
+    "trade_finance_working_capital",
+    "foreign_currency_payment_guarantee",
+    "forward_exchange_hedging",
+    "fx_order_management",
+    "supply_chain_payment_finance",
+    "export_support_program",
+    "trade_receivable_collection",
 ]
 TransactionDirection = Literal["export", "import"]
 TransactionStage = Literal[
@@ -197,7 +209,7 @@ def default_product_registry_path() -> Path:
         Path(__file__).resolve().parents[2]
         / "data"
         / "reference"
-        / "trade_finance_product_registry_v1.json"
+        / "trade_finance_product_registry_v2.json"
     )
 
 
@@ -212,6 +224,14 @@ def load_product_registry(
     return TradeFinanceProductRegistry.model_validate(payload)
 
 
+def _stable_registry_locator(path: Path) -> str:
+    parts = path.resolve().parts
+    for index in range(len(parts) - 1):
+        if parts[index : index + 2] == ("data", "reference"):
+            return Path(*parts[index:]).as_posix()
+    return f"project-rule://trade-finance-products/{path.name}"
+
+
 def _registry_source(
     registry: TradeFinanceProductRegistry,
     path: Path,
@@ -221,7 +241,7 @@ def _registry_source(
         source_name=registry.registry_name,
         source_tier="derived",
         source_kind="project_rule",
-        source_locator=path.as_posix(),
+        source_locator=_stable_registry_locator(path),
         as_of_date=registry.effective_date,
         content_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
         effective_date_verified=True,
@@ -512,15 +532,25 @@ def apply_product_matching(
     source_id = _registry_source(registry, resolved_path).source_id
     result = match_trade_finance_products(profiles, registry_path=resolved_path)
 
+    target_transaction_ids = {profile.transaction_id for profile in profiles}
+
+    def retain_registry_record(item) -> bool:
+        if not item.source.source_id.startswith("TRADE-FINANCE-PRODUCTS-"):
+            return True
+        linked = set(item.linked_transaction_ids)
+        if not linked:
+            return False
+        return not bool(linked.intersection(target_transaction_ids))
+
     retained_candidates = [
         item
         for item in case.trade_finance.product_candidates
-        if item.source.source_id != source_id
+        if retain_registry_record(item)
     ]
     retained_requirements = [
         item
         for item in case.trade_finance.consultation_requirements
-        if item.source.source_id != source_id
+        if retain_registry_record(item)
     ]
     updated_domain = case.trade_finance.model_copy(
         update={
