@@ -1,1 +1,1 @@
-trigger integrated product sprint verification v3
+trigger integrated product sprint verification v4
