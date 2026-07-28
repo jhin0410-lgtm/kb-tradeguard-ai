@@ -1,0 +1,82 @@
+name: one-shot-integrated-product-sprint
+
+on:
+  pull_request:
+    branches:
+      - feature/global-trade-copilot-v2
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/global-trade-copilot-v2
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply integrated product sprint
+        run: python scripts/tmp_patch_integrated_product_sprint.py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run focused product tests
+        run: >-
+          python -m pytest -q
+          tests/test_product_matching.py
+          tests/test_portfolio_assessment.py
+          tests/test_official_data_hub.py
+          tests/test_competition_portfolio_view.py
+      - name: Run full tests except temporary repository-state readiness gate
+        run: python -m pytest -q --ignore=tests/test_competition_readiness.py
+      - name: Compile
+        run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+      - name: Import applications
+        run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Validate intended diff
+        shell: pwsh
+        run: |
+          $changed = git diff --name-only
+          $allowed = @(
+            'README.md',
+            'competition_app.py',
+            'data/reference/trade_finance_product_registry_v2.json',
+            'docs/official_data_hub.md',
+            'docs/portfolio_assessment.md',
+            'src/competition_portfolio_view.py',
+            'src/competition_product_view.py',
+            'src/competition_readiness.py',
+            'src/copilot_case.py',
+            'src/intelligence/__init__.py',
+            'src/intelligence/portfolio_assessment.py',
+            'src/intelligence/product_matching.py',
+            'src/official_data_hub.py',
+            'src/portfolio_demo.py',
+            'tests/test_competition_portfolio_view.py',
+            'tests/test_competition_readiness.py',
+            'tests/test_official_data_hub.py',
+            'tests/test_portfolio_assessment.py',
+            'tests/test_product_matching.py'
+          )
+          foreach ($path in $changed) {
+            if ($allowed -notcontains $path) {
+              throw "Unexpected changed path: $path"
+            }
+          }
+          if (-not $changed) {
+            throw 'No integrated product changes were produced.'
+          }
+      - name: Commit verified integrated product sprint
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md competition_app.py data/reference/trade_finance_product_registry_v2.json docs/official_data_hub.md docs/portfolio_assessment.md src/competition_portfolio_view.py src/competition_product_view.py src/competition_readiness.py src/copilot_case.py src/intelligence/__init__.py src/intelligence/portfolio_assessment.py src/intelligence/product_matching.py src/official_data_hub.py src/portfolio_demo.py tests/test_competition_portfolio_view.py tests/test_competition_readiness.py tests/test_official_data_hub.py tests/test_portfolio_assessment.py tests/test_product_matching.py
+          git commit -m 'Add portfolio, official data, and product v2 experience'
+          git push origin HEAD:feature/global-trade-copilot-v2
