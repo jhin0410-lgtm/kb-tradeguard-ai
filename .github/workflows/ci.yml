@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - feature/global-trade-copilot-v2
+  pull_request:
 
 permissions:
   contents: write
 
 concurrency:
-  group: one-shot-stale-screening-repair
+  group: one-shot-stale-screening-repair-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -69,10 +70,13 @@ jobs:
                   update={
                       "trade_finance": case.trade_finance.model_copy(
                           update={
+                              "country_risk_facts": [
+                                  case.trade_finance.country_risk_facts[0]
+                              ],
                               "compliance_screenings": [
                                   stale_screening,
                                   *case.trade_finance.compliance_screenings[1:],
-                              ]
+                              ],
                           }
                       )
                   }
@@ -175,10 +179,11 @@ jobs:
           git diff --check
 
       - name: Commit verified repair
+        if: github.event_name == 'push'
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/ci.yml .github/workflows/one-shot-fix-stale-screening.yml src/intelligence/transaction_decision_brief.py tests/test_transaction_decision_brief.py
+          git add -A
           git commit -m 'Require fresh compliance screening coverage'
           git push origin HEAD:feature/global-trade-copilot-v2
