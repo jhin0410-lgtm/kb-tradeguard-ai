@@ -147,6 +147,38 @@ def _active_currencies(case: UnifiedCopilotCase) -> list[str]:
     return sorted(currencies)
 
 
+def _usable_fx_currencies(case: UnifiedCopilotCase) -> set[str]:
+    """Return currencies with a disclosed positive KRW spot reference."""
+
+    asset = case.official_fx_reference
+    if (
+        asset is None
+        or asset.status not in {"available", "partial"}
+        or asset.payload is None
+    ):
+        return set()
+    payload = asset.payload
+    if isinstance(payload, dict):
+        if all(isinstance(value, (int, float)) for value in payload.values()):
+            return {
+                str(currency).upper()
+                for currency, value in payload.items()
+                if float(value) > 0
+            }
+        payload = [payload]
+    currencies: set[str] = set()
+    for row in payload:
+        currency = str(row.get("currency") or "").upper()
+        value = row.get("spot_rate_krw", row.get("rate"))
+        try:
+            usable = value is not None and float(value) > 0
+        except (TypeError, ValueError):
+            usable = False
+        if currency and usable:
+            currencies.add(currency)
+    return currencies
+
+
 def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
     """Create auditable scenario candidates without calculating financial outcomes."""
 
@@ -231,10 +263,38 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
     )
 
     imports = [row for row in case.approved_transactions if _direction(row) == "import"]
-    cost_missing = [] if imports else ["approved import transaction"]
+    target_import_ids = [
+        transaction_id
+        for row in imports
+        if (transaction_id := _transaction_id(row)) is not None
+    ]
+    cost_missing: list[str] = []
+    if not imports:
+        cost_missing.append("approved import transaction")
+    elif len(target_import_ids) != len(imports):
+        cost_missing.append("transaction_id for each approved import transaction")
+
+    assumptions = case.monthly_cost_assumptions
+    for input_name in ("monthly_fixed_cost_krw", "current_cash_krw"):
+        if assumptions.get(input_name) in (None, ""):
+            cost_missing.append(input_name)
+
+    transaction_currencies = _active_currencies(case)
+    if any(not row.get("currency") for row in case.approved_transactions):
+        cost_missing.append("currency for each approved transaction")
+    usable_fx_currencies = _usable_fx_currencies(case)
+    if not usable_fx_currencies:
+        cost_missing.append("official or disclosed FX reference")
+    else:
+        cost_missing.extend(
+            f"FX reference for transaction currency: {currency}"
+            for currency in transaction_currencies
+            if currency not in usable_fx_currencies
+        )
+
     cost_payload = {
         "type": "import_cost_increase",
-        "transaction_ids": [_transaction_id(row) for row in imports if _transaction_id(row)],
+        "transaction_ids": target_import_ids,
         "increase_percent": 10,
         "case_hash": source_case_hash,
     }
@@ -248,14 +308,18 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
                 "원재료·운송비 등 수입 관련 지급액 증가가 유동성 공백을 얼마나 "
                 "확대하는지 점검합니다."
             ),
-            target_transaction_ids=[
-                _transaction_id(row) for row in imports if _transaction_id(row)
-            ],
+            target_transaction_ids=target_import_ids,
             parameter_changes={"import_amount_increase_percent": 10},
             parameter_sources={
                 "import_amount_increase_percent": "governed default stress assumption"
             },
-            required_inputs=["approved import transaction"],
+            required_inputs=[
+                "approved import transaction",
+                "transaction_id for each approved import transaction",
+                "monthly_fixed_cost_krw",
+                "current_cash_krw",
+                "official or disclosed FX reference for each transaction currency",
+            ],
             missing_inputs=cost_missing,
             readiness="blocked" if cost_missing else "ready",
             execution_tool="run_import_cost_scenario",

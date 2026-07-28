@@ -23,6 +23,7 @@ def _case(**overrides):
                 "transaction_type": "export",
                 "currency": "USD",
                 "amount_fc": 500000,
+                "probability": 1.0,
                 "expected_date": "2026-11-30",
                 "status": "expected",
             },
@@ -31,11 +32,15 @@ def _case(**overrides):
                 "transaction_type": "import",
                 "currency": "USD",
                 "amount_fc": 220000,
+                "probability": 1.0,
                 "expected_date": "2026-10-15",
                 "status": "confirmed",
             },
         ],
-        "monthly_cost_assumptions": {"monthly_fixed_cost_krw": 50000000},
+        "monthly_cost_assumptions": {
+            "monthly_fixed_cost_krw": 50000000,
+            "current_cash_krw": 100000000,
+        },
         "official_fx_reference": CaseDataAsset(
             asset_name="KEXIM public reference FX",
             status="available",
@@ -84,13 +89,22 @@ def test_largest_export_receivable_is_delay_target():
     assert delay.target_transaction_ids == ["EXP-LARGE"]
 
 
-def test_missing_cost_assumptions_block_delay_and_combined_only():
+def test_missing_cost_assumptions_block_cashflow_scenarios():
     proposals = propose_scenarios(_case(monthly_cost_assumptions={}))
     statuses = {item.scenario_type: item.readiness for item in proposals.candidates}
     assert statuses["settlement_delay"] == "blocked"
     assert statuses["combined_stress"] == "blocked"
+    assert statuses["import_cost_increase"] == "blocked"
     assert statuses["fx_shock"] == "ready"
     assert "monthly cost assumptions" in proposals.candidates[0].missing_inputs
+    import_candidate = next(
+        item
+        for item in proposals.candidates
+        if item.scenario_type == "import_cost_increase"
+    )
+    assert {"monthly_fixed_cost_krw", "current_cash_krw"}.issubset(
+        import_candidate.missing_inputs
+    )
 
 
 def test_missing_fx_reference_blocks_fx_and_combined():
@@ -98,7 +112,62 @@ def test_missing_fx_reference_blocks_fx_and_combined():
     statuses = {item.scenario_type: item.readiness for item in proposals.candidates}
     assert statuses["fx_shock"] == "blocked"
     assert statuses["combined_stress"] == "blocked"
+    assert statuses["import_cost_increase"] == "blocked"
     assert statuses["settlement_delay"] == "ready"
+
+
+@pytest.mark.parametrize(
+    ("monthly_cost_assumptions", "missing_input"),
+    [
+        ({"monthly_fixed_cost_krw": 50000000}, "current_cash_krw"),
+        ({"current_cash_krw": 100000000}, "monthly_fixed_cost_krw"),
+    ],
+)
+def test_import_cost_candidate_requires_each_cash_assumption(
+    monthly_cost_assumptions,
+    missing_input,
+):
+    candidate = next(
+        item
+        for item in propose_scenarios(
+            _case(monthly_cost_assumptions=monthly_cost_assumptions)
+        ).candidates
+        if item.scenario_type == "import_cost_increase"
+    )
+
+    assert candidate.readiness == "blocked"
+    assert missing_input in candidate.missing_inputs
+
+
+def test_import_cost_candidate_requires_transaction_ids():
+    transactions = [dict(item) for item in _case().approved_transactions]
+    transactions[1].pop("transaction_id")
+    candidate = next(
+        item
+        for item in propose_scenarios(
+            _case(approved_transactions=transactions)
+        ).candidates
+        if item.scenario_type == "import_cost_increase"
+    )
+
+    assert candidate.readiness == "blocked"
+    assert "transaction_id for each approved import transaction" in candidate.missing_inputs
+    assert candidate.target_transaction_ids == []
+
+
+def test_import_cost_candidate_requires_rate_for_every_transaction_currency():
+    transactions = [dict(item) for item in _case().approved_transactions]
+    transactions[1]["currency"] = "EUR"
+    candidate = next(
+        item
+        for item in propose_scenarios(
+            _case(approved_transactions=transactions)
+        ).candidates
+        if item.scenario_type == "import_cost_increase"
+    )
+
+    assert candidate.readiness == "blocked"
+    assert "FX reference for transaction currency: EUR" in candidate.missing_inputs
 
 
 def test_no_import_blocks_import_cost_candidate():
