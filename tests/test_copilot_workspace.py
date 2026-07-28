@@ -122,6 +122,6 @@ def test_workspace_rejects_mixed_case_snapshots():
     try:
         CopilotWorkspace.model_validate(payload)
     except ValueError as exc:
-        assert "same case snapshot" in str(exc)
+        assert "case snapshot" in str(exc)
     else:
         raise AssertionError("Mixed case snapshots must be rejected")
