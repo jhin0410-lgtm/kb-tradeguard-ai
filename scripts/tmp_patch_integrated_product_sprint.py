@@ -53,3 +53,15 @@ patch_payload = "".join(
 patch_path = ROOT / "scripts/tmp_apply_integrated_product_sprint.py"
 patch_path.write_bytes(gzip.decompress(base64.b64decode(patch_payload)))
 runpy.run_path(str(patch_path), run_name="__main__")
+
+# Preserve the existing mobile navigation contract while adding new workflow sections.
+competition_app = ROOT / "competition_app.py"
+text = competition_app.read_text(encoding="utf-8")
+text = text.replace(
+    '          <a href="#evidence" target="_self">근거</a>\n'
+    '          <a href="#portfolio" target="_self">포트폴리오</a>',
+    '          <a href="#evidence" target="_self">근거</a>\n'
+    '          <a href="#actions" target="_self">실행</a>\n'
+    '          <a href="#portfolio" target="_self">포트폴리오</a>',
+)
+competition_app.write_text(text, encoding="utf-8")
