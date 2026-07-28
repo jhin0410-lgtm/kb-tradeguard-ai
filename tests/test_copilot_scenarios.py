@@ -259,3 +259,30 @@ def test_fx_candidate_disclaims_executable_kb_quote():
         if item.scenario_type == "fx_shock"
     )
     assert any("실제 KB 실행 가능 견적이 아닙니다" in text for text in candidate.limitations)
+
+
+def test_candidate_becomes_stale_when_nontransaction_execution_inputs_change():
+    case = _case()
+    candidate = next(
+        item
+        for item in propose_scenarios(case).ready_candidates
+        if item.scenario_type == "settlement_delay"
+    )
+
+    changed_costs = case.model_copy(
+        update={
+            "monthly_cost_assumptions": {
+                **case.monthly_cost_assumptions,
+                "current_cash_krw": 125000000,
+            }
+        }
+    )
+    with pytest.raises(ValueError, match="different case snapshot"):
+        build_execution_request(changed_costs, candidate, human_approved=True)
+
+    changed_fx_asset = case.official_fx_reference.model_copy(
+        update={"payload": {"USD": 1400.0}}
+    )
+    changed_fx = case.model_copy(update={"official_fx_reference": changed_fx_asset})
+    with pytest.raises(ValueError, match="different case snapshot"):
+        build_execution_request(changed_fx, candidate, human_approved=True)

@@ -166,3 +166,45 @@ def test_execution_rejects_advisor_tools_from_different_case_snapshot(scenario_t
             _candidate(case, scenario_type),
             human_approved=True,
         )
+
+
+def test_delay_execution_rejects_mismatched_fx_and_cash_inputs():
+    case = _case()
+    candidate = _candidate(case, "settlement_delay")
+
+    changed_fx = _fx_rates()
+    changed_fx.loc[changed_fx["currency"] == "USD", "spot_rate_krw"] = 1400.0
+    fx_executor = GovernedScenarioExecutor(
+        ReadOnlyAdvisorTools(_transactions(), changed_fx, _company())
+    )
+    with pytest.raises(ValueError, match="input snapshot does not match"):
+        fx_executor.execute(case, candidate, human_approved=True)
+
+    changed_company = dict(_company())
+    changed_company["current_cash_krw"] = 125000000
+    cash_executor = GovernedScenarioExecutor(
+        ReadOnlyAdvisorTools(_transactions(), _fx_rates(), changed_company)
+    )
+    with pytest.raises(ValueError, match="input snapshot does not match"):
+        cash_executor.execute(case, candidate, human_approved=True)
+
+
+def test_fx_execution_rejects_mismatched_rates_and_foreign_cash_inputs():
+    case = _case()
+    candidate = _candidate(case, "fx_shock")
+
+    changed_fx = _fx_rates()
+    changed_fx.loc[changed_fx["currency"] == "USD", "foreign_interest_rate"] = 0.06
+    rate_executor = GovernedScenarioExecutor(
+        ReadOnlyAdvisorTools(_transactions(), changed_fx, _company())
+    )
+    with pytest.raises(ValueError, match="input snapshot does not match"):
+        rate_executor.execute(case, candidate, human_approved=True)
+
+    changed_company = dict(_company())
+    changed_company["foreign_cash"] = {"USD": 65000}
+    cash_executor = GovernedScenarioExecutor(
+        ReadOnlyAdvisorTools(_transactions(), _fx_rates(), changed_company)
+    )
+    with pytest.raises(ValueError, match="input snapshot does not match"):
+        cash_executor.execute(case, candidate, human_approved=True)

@@ -482,3 +482,61 @@ def test_stage_failure_is_identified_and_no_partial_case_is_returned():
     assert "approved case evidence" in str(caught.value)
     assert case.trade_finance.clause_findings == []
     assert case.trade_finance.risk_signals == []
+
+
+def test_capacity_cleanup_preserves_records_for_other_transactions():
+    first, _ = run_single_transaction_assessment(_full_case(), _request())
+    capacity_calculation = next(
+        calculation
+        for calculation in first.calculations.values()
+        if calculation.calculation_name == "Transaction financial capacity assessment"
+    )
+    capacity_signal = next(
+        signal
+        for signal in first.trade_finance.risk_signals
+        if signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
+    )
+    unrelated_calculation = capacity_calculation.model_copy(
+        update={
+            "calculation_id": "CALC-UNRELATED-CAPACITY",
+            "input_assumptions": {
+                **capacity_calculation.input_assumptions,
+                "transaction_id": "EXP-OTHER",
+            },
+        }
+    )
+    unrelated_signal = capacity_signal.model_copy(
+        update={
+            "signal_id": "RISK-UNRELATED-CAPACITY",
+            "affected_transaction_ids": ["EXP-OTHER"],
+            "calculation_ids": [unrelated_calculation.calculation_id],
+        }
+    )
+    augmented_domain = first.trade_finance.model_copy(
+        update={
+            "risk_signals": [
+                *first.trade_finance.risk_signals,
+                unrelated_signal,
+            ]
+        }
+    )
+    augmented = first.model_copy(
+        update={
+            "calculations": {
+                **first.calculations,
+                unrelated_calculation.calculation_id: unrelated_calculation,
+            },
+            "trade_finance": augmented_domain,
+        }
+    )
+
+    updated, _ = run_single_transaction_assessment(
+        augmented,
+        _request(capacity_request=None),
+    )
+
+    assert unrelated_calculation.calculation_id in updated.calculations
+    assert any(
+        signal.signal_id == unrelated_signal.signal_id
+        for signal in updated.trade_finance.risk_signals
+    )
