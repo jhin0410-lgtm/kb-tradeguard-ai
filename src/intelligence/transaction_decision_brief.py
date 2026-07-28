@@ -165,6 +165,16 @@ def load_transaction_decision_brief_registry(
     return TransactionDecisionBriefRuleRegistry.model_validate(payload)
 
 
+def _stable_registry_locator(path: Path) -> str:
+    """Return a checkout-independent locator for an auditable project registry."""
+
+    parts = path.resolve().parts
+    for index in range(len(parts) - 1):
+        if parts[index : index + 2] == ("data", "reference"):
+            return Path(*parts[index:]).as_posix()
+    return f"project-rule://transaction-decision-brief/{path.name}"
+
+
 def _registry_source(
     registry: TransactionDecisionBriefRuleRegistry,
     path: Path,
@@ -174,7 +184,7 @@ def _registry_source(
         source_name=registry.registry_name,
         source_tier="derived",
         source_kind="project_rule",
-        source_locator=path.as_posix(),
+        source_locator=_stable_registry_locator(path),
         as_of_date=registry.effective_date,
         content_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
         effective_date_verified=True,

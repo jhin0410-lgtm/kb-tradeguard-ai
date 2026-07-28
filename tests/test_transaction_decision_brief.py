@@ -13,6 +13,7 @@ from src.intelligence.transaction_decision_brief import (
     TransactionDecisionBriefRequest,
     apply_transaction_decision_brief,
     build_transaction_decision_brief,
+    default_transaction_decision_brief_registry_path,
     load_transaction_decision_brief_registry,
 )
 from src.trade_finance_domain import (
@@ -305,6 +306,46 @@ def test_registry_uses_explicit_orders_and_no_score():
     assert registry.category_order[0] == "compliance"
     assert "score" not in registry.model_dump()
     assert "does not approve or reject" in registry.authority_boundary
+
+
+def test_registry_source_locator_is_checkout_independent(tmp_path):
+    registry_bytes = default_transaction_decision_brief_registry_path().read_bytes()
+    first_path = (
+        tmp_path
+        / "checkout-a"
+        / "data"
+        / "reference"
+        / "transaction_decision_brief_rules_v1.json"
+    )
+    second_path = (
+        tmp_path
+        / "checkout-b"
+        / "data"
+        / "reference"
+        / "transaction_decision_brief_rules_v1.json"
+    )
+    for path in (first_path, second_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(registry_bytes)
+
+    case = _case()
+    request = _request(case)
+    first_case, first_brief, _ = apply_transaction_decision_brief(
+        case,
+        request,
+        registry_path=first_path,
+    )
+    second_case, second_brief, _ = apply_transaction_decision_brief(
+        case,
+        request,
+        registry_path=second_path,
+    )
+
+    assert first_brief.source.source_locator == (
+        "data/reference/transaction_decision_brief_rules_v1.json"
+    )
+    assert first_brief.source == second_brief.source
+    assert first_case.case_hash == second_case.case_hash
 
 
 def test_high_concerns_create_conditions_before_commitment_and_rank_deterministically():
