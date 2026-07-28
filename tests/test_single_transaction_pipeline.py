@@ -382,6 +382,50 @@ def test_optional_stages_are_explicitly_skipped_and_brief_reports_gaps():
     )
 
 
+def test_rerun_without_capacity_request_clears_prior_capacity_records():
+    first, _ = run_single_transaction_assessment(_full_case(), _request())
+    prior_calculation_ids = {
+        calculation_id
+        for calculation_id, calculation in first.calculations.items()
+        if calculation.calculation_name
+        == "Transaction financial capacity assessment"
+        and calculation.input_assumptions.get("transaction_id") == "EXP-001"
+    }
+    prior_signal_ids = {
+        signal.signal_id
+        for signal in first.trade_finance.risk_signals
+        if "EXP-001" in signal.affected_transaction_ids
+        and signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
+    }
+    assert prior_calculation_ids
+    assert prior_signal_ids
+
+    updated, result = run_single_transaction_assessment(
+        first,
+        _request(capacity_request=None),
+    )
+
+    assert not prior_calculation_ids.intersection(updated.calculations)
+    assert not any(
+        "EXP-001" in signal.affected_transaction_ids
+        and signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
+        for signal in updated.trade_finance.risk_signals
+    )
+    capacity_trace = next(
+        trace
+        for trace in result.stage_traces
+        if trace.stage_name == "transaction_capacity"
+    )
+    assert capacity_trace.status == "skipped"
+    assert set(capacity_trace.details["removed_record_ids"]) == (
+        prior_calculation_ids | prior_signal_ids
+    )
+    assert any(
+        item.startswith("financial_capacity_calculation")
+        for item in result.brief.missing_information
+    )
+
+
 def test_pipeline_rejects_multi_transaction_case_before_running_stages():
     case = _full_case()
     case = case.model_copy(

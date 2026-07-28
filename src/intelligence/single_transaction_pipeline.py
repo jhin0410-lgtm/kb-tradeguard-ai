@@ -254,6 +254,52 @@ def _trace(
     )
 
 
+def _clear_transaction_capacity_records(
+    case: UnifiedCopilotCase,
+    transaction_id: str,
+) -> tuple[UnifiedCopilotCase, list[str]]:
+    """Remove capacity outputs that are no longer supported by the current run."""
+
+    calculation_ids = {
+        calculation_id
+        for calculation_id, calculation in case.calculations.items()
+        if calculation.calculation_name
+        == "Transaction financial capacity assessment"
+        and str(calculation.input_assumptions.get("transaction_id"))
+        == transaction_id
+    }
+    removed_signal_ids: list[str] = []
+    retained_signals = []
+    for signal in case.trade_finance.risk_signals:
+        transaction_scoped = transaction_id in signal.affected_transaction_ids
+        capacity_derived = (
+            signal.source.source_id.startswith("TRANSACTION-CAPACITY-")
+            or bool(calculation_ids.intersection(signal.calculation_ids))
+        )
+        if transaction_scoped and capacity_derived:
+            removed_signal_ids.append(signal.signal_id)
+        else:
+            retained_signals.append(signal)
+
+    if not calculation_ids and not removed_signal_ids:
+        return case, []
+
+    calculations = {
+        calculation_id: calculation
+        for calculation_id, calculation in case.calculations.items()
+        if calculation_id not in calculation_ids
+    }
+    domain = case.trade_finance.model_copy(update={"risk_signals": retained_signals})
+    updated = case.model_copy(
+        update={
+            "calculations": calculations,
+            "trade_finance": domain,
+        }
+    )
+    removed_ids = sorted(calculation_ids) + sorted(removed_signal_ids)
+    return updated, removed_ids
+
+
 def run_single_transaction_assessment(
     case: UnifiedCopilotCase,
     request: SingleTransactionAssessmentRequest,
@@ -379,14 +425,19 @@ def run_single_transaction_assessment(
             )
         )
     else:
+        working, removed_capacity_record_ids = _clear_transaction_capacity_records(
+            working,
+            request.transaction_id,
+        )
         traces.append(
             _trace(
                 3,
                 "transaction_capacity",
                 "skipped",
                 before,
-                before,
+                working.case_hash,
                 reason="No reviewed transaction-capacity request was supplied.",
+                removed_record_ids=removed_capacity_record_ids,
             )
         )
 
