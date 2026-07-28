@@ -84,12 +84,16 @@ def _executor():
     )
 
 
-def _delay_candidate(case):
+def _candidate(case, scenario_type):
     return next(
         item
         for item in propose_scenarios(case).candidates
-        if item.scenario_type == "settlement_delay"
+        if item.scenario_type == scenario_type
     )
+
+
+def _delay_candidate(case):
+    return _candidate(case, "settlement_delay")
 
 
 def test_delay_scenario_executes_through_deterministic_tool():
@@ -143,3 +147,22 @@ def test_execution_preserves_original_case_and_records_snapshot_change():
     assert outcome.case_before_hash == before
     assert outcome.case_after_hash == updated.case_hash
     assert updated.case_hash != before
+
+
+@pytest.mark.parametrize("scenario_type", ["settlement_delay", "fx_shock"])
+def test_execution_rejects_advisor_tools_from_different_case_snapshot(scenario_type):
+    case = _case()
+    stale_transactions = _transactions()
+    stale_transactions.loc[
+        stale_transactions["transaction_id"] == "EXP-001", "amount_fc"
+    ] = 750000
+    executor = GovernedScenarioExecutor(
+        ReadOnlyAdvisorTools(stale_transactions, _fx_rates(), _company())
+    )
+
+    with pytest.raises(ValueError, match="input snapshot does not match"):
+        executor.execute(
+            case,
+            _candidate(case, scenario_type),
+            human_approved=True,
+        )
