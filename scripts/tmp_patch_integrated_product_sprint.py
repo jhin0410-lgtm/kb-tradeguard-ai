@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(".")
+_ALLOWED_ROOTS = {"src", "tests"}
 _ALLOWED_PREFIXES = ("src/", "tests/")
 
 
@@ -23,7 +24,7 @@ with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
         path = Path(member.name)
         if path.is_absolute() or ".." in path.parts:
             raise RuntimeError(f"Unsafe archive member: {member.name}")
-        if not member.name.startswith(_ALLOWED_PREFIXES):
+        if member.name not in _ALLOWED_ROOTS and not member.name.startswith(_ALLOWED_PREFIXES):
             raise RuntimeError(f"Unexpected archive member: {member.name}")
     archive.extractall(ROOT)
 
