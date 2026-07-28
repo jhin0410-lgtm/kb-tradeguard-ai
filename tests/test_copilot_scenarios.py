@@ -49,7 +49,8 @@ def _case(**overrides):
 
 
 def test_proposes_four_governed_scenarios():
-    proposals = propose_scenarios(_case())
+    case = _case()
+    proposals = propose_scenarios(case)
     assert [item.scenario_type for item in proposals.candidates] == [
         "settlement_delay",
         "fx_shock",
@@ -57,6 +58,9 @@ def test_proposes_four_governed_scenarios():
         "combined_stress",
     ]
     assert len(proposals.ready_candidates) == 4
+    assert all(
+        item.source_case_hash == case.case_hash for item in proposals.candidates
+    )
 
 
 def test_largest_export_receivable_is_delay_target():
@@ -145,6 +149,19 @@ def test_ready_candidate_builds_case_bound_execution_request():
     assert request.case_hash == case.case_hash
     assert request.scenario_id == candidate.scenario_id
     assert request.execution_tool == "run_cashflow_delay_scenario"
+
+
+def test_stale_candidate_cannot_be_rebound_to_changed_case():
+    case = _case()
+    candidate = propose_scenarios(case).ready_candidates[0]
+    changed_transactions = [dict(item) for item in case.approved_transactions]
+    changed_transactions[0]["amount_fc"] = 750000
+    changed = case.model_copy(
+        update={"approved_transactions": changed_transactions}
+    )
+
+    with pytest.raises(ValueError, match="different case snapshot"):
+        build_execution_request(changed, candidate, human_approved=True)
 
 
 def test_attach_proposals_returns_copy_and_preserves_original():
