@@ -386,6 +386,7 @@ def _match_one_product(
     record_status = "partial" if status == "insufficient_information" else "verified"
     candidate = ProductCandidate(
         product_candidate_id=_candidate_id(product, profile),
+        linked_transaction_ids=[profile.transaction_id],
         provider=product.provider,
         product_or_service_name=product.product_name,
         product_category=product.product_category,
@@ -412,6 +413,7 @@ def _match_one_product(
     if status in {"consultation_candidate", "insufficient_information"}:
         requirement = ConsultationRequirement(
             requirement_id=_requirement_id(product, profile),
+            linked_transaction_ids=[profile.transaction_id],
             consultation_route=product.consultation_route,
             purpose=(
                 f"Confirm current conditions and eligibility for {product.product_name} "

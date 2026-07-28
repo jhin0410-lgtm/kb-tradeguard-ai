@@ -168,3 +168,69 @@ def test_duplicate_review_id_and_ambiguous_unsuperseded_ledger_are_rejected():
     )
     with pytest.raises(ValueError, match="multiple unsuperseded"):
         latest_finding_review_decisions(ambiguous)
+
+
+def test_imported_ledger_rejects_cross_finding_supersession():
+    case = _case()
+    other_finding = _finding().model_copy(
+        update={
+            "clause_finding_id": "CLAUSE-OTHER-DOC-LC-001",
+            "clause_locator": "Other clause",
+        }
+    )
+    domain = case.trade_finance.model_copy(
+        update={"clause_findings": [*case.trade_finance.clause_findings, other_finding]}
+    )
+    first = _decision()
+    cross_finding = _decision(
+        review_id="REVIEW-002",
+        finding_id=other_finding.clause_finding_id,
+        supersedes_review_id="REVIEW-001",
+        reviewer_id="reviewer-02",
+        reviewed_at=datetime(2026, 7, 27, 10, 0, tzinfo=timezone.utc),
+    )
+    malformed = case.model_copy(
+        update={
+            "trade_finance": domain,
+            "finding_reviews": [first, cross_finding],
+        }
+    )
+
+    with pytest.raises(ValueError, match="different finding"):
+        latest_finding_review_decisions(malformed)
+
+
+def test_imported_ledger_rejects_nonlatest_same_finding_supersession():
+    first = _decision()
+    second = _decision(
+        review_id="REVIEW-002",
+        supersedes_review_id="REVIEW-001",
+        reviewer_id="reviewer-02",
+        reviewed_at=datetime(2026, 7, 27, 10, 0, tzinfo=timezone.utc),
+    )
+    stale_branch = _decision(
+        review_id="REVIEW-003",
+        supersedes_review_id="REVIEW-001",
+        reviewer_id="reviewer-03",
+        reviewed_at=datetime(2026, 7, 27, 11, 0, tzinfo=timezone.utc),
+    )
+    malformed = _case().model_copy(
+        update={"finding_reviews": [first, second, stale_branch]}
+    )
+
+    with pytest.raises(ValueError, match="latest review"):
+        latest_finding_review_decisions(malformed)
+
+
+def test_imported_ledger_rejects_cycles_and_forward_references():
+    first = _decision(supersedes_review_id="REVIEW-002")
+    second = _decision(
+        review_id="REVIEW-002",
+        supersedes_review_id="REVIEW-001",
+        reviewer_id="reviewer-02",
+        reviewed_at=datetime(2026, 7, 27, 10, 0, tzinfo=timezone.utc),
+    )
+    cyclic = _case().model_copy(update={"finding_reviews": [first, second]})
+
+    with pytest.raises(ValueError, match="prior review ID"):
+        latest_finding_review_decisions(cyclic)

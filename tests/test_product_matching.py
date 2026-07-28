@@ -241,3 +241,26 @@ def test_duplicate_need_profile_ids_are_rejected():
 
     with pytest.raises(ValueError, match="profile IDs must be unique"):
         match_trade_finance_products([profile, profile])
+
+
+def test_product_outputs_preserve_transaction_linkage():
+    profile = TradeFinanceNeedProfile(
+        profile_id="NEED-LINK-001",
+        transaction_id="EXP-LINK-001",
+        transaction_direction="export",
+        transaction_stage="pre_shipment",
+        declared_needs=["buyer_credit_investigation"],
+        company_size="sme",
+    )
+
+    result = match_trade_finance_products([profile])
+
+    assert result.product_candidates
+    assert all(
+        item.linked_transaction_ids == ["EXP-LINK-001"]
+        for item in result.product_candidates
+    )
+    assert all(
+        item.linked_transaction_ids == ["EXP-LINK-001"]
+        for item in result.consultation_requirements
+    )

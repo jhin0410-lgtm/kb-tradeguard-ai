@@ -216,6 +216,15 @@ def _last_three_consecutive(values: list[tuple[int, float]]) -> list[float] | No
     return [item[1] for item in last]
 
 
+def _last_two_consecutive(values: list[tuple[int, float]]) -> list[float] | None:
+    if len(values) < 2:
+        return None
+    last = values[-2:]
+    if last[1][0] - last[0][0] != 1:
+        return None
+    return [item[1] for item in last]
+
+
 def _build_trend_flags(
     annual_metrics: pd.DataFrame,
     annual_accounts: pd.DataFrame,
@@ -286,21 +295,26 @@ def _build_trend_flags(
         )
 
     net_income = _series_values(annual_accounts, "account_key", "net_income")
-    if len(net_income) >= 2 and net_income[-2][1] >= 0 > net_income[-1][1]:
+    consecutive_net_income = _last_two_consecutive(net_income)
+    if (
+        consecutive_net_income
+        and consecutive_net_income[-2] >= 0 > consecutive_net_income[-1]
+    ):
         add(
             "net_income",
             "high",
             "최근 사업연도 당기순이익이 전년 흑자에서 적자로 전환했습니다.",
-            net_income[-1][1],
+            consecutive_net_income[-1],
         )
 
     operating_cash_flow = _series_values(
         annual_accounts, "account_key", "operating_cash_flow"
     )
     if operating_cash_flow and operating_cash_flow[-1][1] < 0:
+        consecutive_cash_flow = _last_two_consecutive(operating_cash_flow)
         severity = (
             "high"
-            if len(operating_cash_flow) >= 2 and operating_cash_flow[-2][1] < 0
+            if consecutive_cash_flow and all(value < 0 for value in consecutive_cash_flow)
             else "review"
         )
         add(

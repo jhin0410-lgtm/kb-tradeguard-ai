@@ -296,3 +296,51 @@ def test_snapshot_year_mismatch_is_rejected():
 def test_at_least_two_years_are_required():
     with pytest.raises(ValueError, match="at least two years"):
         analyze_financial_trends({2025: _snapshot(2025, [])})
+
+
+def test_nonconsecutive_net_income_does_not_claim_prior_year_transition():
+    common = dict(
+        assets="100",
+        current_assets="50",
+        liabilities="50",
+        current_liabilities="25",
+        equity="50",
+        revenue="100",
+        operating_profit="10",
+        finance_costs="2",
+        operating_cash_flow="8",
+    )
+    snapshots = {
+        2022: _snapshot(2022, _statement(net_income="10", **common)),
+        2023: _snapshot(2023, _statement(net_income=None, **common)),
+        2024: _snapshot(2024, _statement(net_income="(5)", **common)),
+    }
+
+    result = analyze_financial_trends(snapshots)
+
+    assert "net_income" not in set(result.flags["series"])
+
+
+def test_nonconsecutive_negative_cash_flow_is_not_called_two_year_streak():
+    common = dict(
+        assets="100",
+        current_assets="50",
+        liabilities="50",
+        current_liabilities="25",
+        equity="50",
+        revenue="100",
+        operating_profit="10",
+        net_income="5",
+        finance_costs="2",
+    )
+    snapshots = {
+        2022: _snapshot(2022, _statement(operating_cash_flow="(10)", **common)),
+        2023: _snapshot(2023, _statement(operating_cash_flow=None, **common)),
+        2024: _snapshot(2024, _statement(operating_cash_flow="(20)", **common)),
+    }
+
+    result = analyze_financial_trends(snapshots)
+    flag = result.flags[result.flags["series"] == "operating_cash_flow"].iloc[0]
+
+    assert flag["severity"] == "review"
+    assert flag["message"] == "최근 사업연도 영업현금흐름이 음수입니다."

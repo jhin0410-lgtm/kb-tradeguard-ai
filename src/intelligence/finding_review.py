@@ -37,32 +37,44 @@ class FindingReviewSummary(BaseModel):
 def latest_finding_review_decisions(
     case: UnifiedCopilotCase,
 ) -> dict[str, FindingReviewDecision]:
-    """Return the unsuperseded review decision for each finding."""
+    """Validate each append-only review chain and return its latest decision."""
 
-    by_id = {item.review_id: item for item in case.finding_reviews}
-    superseded = {
-        item.supersedes_review_id
-        for item in case.finding_reviews
-        if item.supersedes_review_id is not None
-    }
+    by_id: dict[str, FindingReviewDecision] = {}
     latest: dict[str, FindingReviewDecision] = {}
     for decision in case.finding_reviews:
-        if decision.review_id in superseded:
-            continue
-        existing = latest.get(decision.finding_id)
-        if existing is not None:
-            raise ValueError(
-                "Finding review ledger has multiple unsuperseded decisions for "
-                f"{decision.finding_id}: {existing.review_id}, {decision.review_id}"
-            )
-        latest[decision.finding_id] = decision
+        if decision.review_id in by_id:
+            raise ValueError(f"Finding review ID is duplicated: {decision.review_id}")
 
-    unknown_superseded = sorted(identifier for identifier in superseded if identifier not in by_id)
-    if unknown_superseded:
-        raise ValueError(
-            "Finding review ledger references unknown superseded review IDs: "
-            + ", ".join(unknown_superseded)
-        )
+        current = latest.get(decision.finding_id)
+        superseded_id = decision.supersedes_review_id
+        if superseded_id is None:
+            if current is not None:
+                raise ValueError(
+                    "Finding review ledger has multiple unsuperseded decisions for "
+                    f"{decision.finding_id}: {current.review_id}, {decision.review_id}"
+                )
+        else:
+            superseded = by_id.get(superseded_id)
+            if superseded is None:
+                raise ValueError(
+                    "Finding review supersession must reference a prior review ID: "
+                    f"{superseded_id}"
+                )
+            if superseded.finding_id != decision.finding_id:
+                raise ValueError(
+                    "Finding review cannot supersede a review for a different finding: "
+                    f"{superseded_id} belongs to {superseded.finding_id}, "
+                    f"not {decision.finding_id}"
+                )
+            if current is None or current.review_id != superseded_id:
+                expected = current.review_id if current is not None else "none"
+                raise ValueError(
+                    "Finding review must supersede the latest review for the same finding; "
+                    f"expected {expected}, received {superseded_id}"
+                )
+
+        by_id[decision.review_id] = decision
+        latest[decision.finding_id] = decision
     return latest
 
 

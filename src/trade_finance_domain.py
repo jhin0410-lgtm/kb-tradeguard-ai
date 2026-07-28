@@ -393,6 +393,7 @@ class ProductCandidate(EvidenceBackedRecord):
     """A consultation candidate, never an eligibility or approval decision."""
 
     product_candidate_id: str
+    linked_transaction_ids: list[str] = Field(default_factory=list)
     provider: str
     product_or_service_name: str
     product_category: Literal[
@@ -428,6 +429,7 @@ class ProductCandidate(EvidenceBackedRecord):
 
 class ConsultationRequirement(EvidenceBackedRecord):
     requirement_id: str
+    linked_transaction_ids: list[str] = Field(default_factory=list)
     consultation_route: Literal[
         "bank_relationship_manager",
         "trade_finance_specialist",

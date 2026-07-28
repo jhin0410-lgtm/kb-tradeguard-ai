@@ -571,3 +571,64 @@ def test_max_ranked_concerns_limits_display_not_disposition_logic():
 
     assert len(brief.ranked_concerns) == 1
     assert brief.disposition == "specialist_clearance_required"
+
+
+@pytest.mark.parametrize("record_kind", ["candidate", "requirement"])
+def test_brief_rejects_product_records_linked_to_another_transaction(record_kind):
+    case = _case()
+    other_profile = TradeFinanceNeedProfile(
+        profile_id="NEED-EXP-002",
+        transaction_id="EXP-002",
+        transaction_direction="export",
+        transaction_stage="pre_shipment",
+        declared_needs=["buyer_credit_investigation", "pre_shipment_working_capital"],
+        company_size="sme",
+        tenor_days=90,
+        preferred_bank="KB국민은행",
+        available_documents=["수출계약 또는 발주서"],
+    )
+    other_products = match_trade_finance_products([other_profile])
+    domain = case.trade_finance.model_copy(
+        update={
+            "product_candidates": [
+                *case.trade_finance.product_candidates,
+                *other_products.product_candidates,
+            ],
+            "consultation_requirements": [
+                *case.trade_finance.consultation_requirements,
+                *other_products.consultation_requirements,
+            ],
+        }
+    )
+    multi_case = case.model_copy(
+        update={
+            "approved_transactions": [
+                *case.approved_transactions,
+                {
+                    "transaction_id": "EXP-002",
+                    "transaction_type": "export",
+                    "currency": "USD",
+                    "amount_fc": 250000,
+                    "expected_date": "2026-12-15",
+                },
+            ],
+            "trade_finance": domain,
+        }
+    )
+    if record_kind == "candidate":
+        request = _request(
+            multi_case,
+            product_candidate_ids=[other_products.product_candidates[0].product_candidate_id],
+            consultation_requirement_ids=[],
+        )
+    else:
+        request = _request(
+            multi_case,
+            product_candidate_ids=[],
+            consultation_requirement_ids=[
+                other_products.consultation_requirements[0].requirement_id
+            ],
+        )
+
+    with pytest.raises(ValueError, match="not linked to transaction EXP-001"):
+        build_transaction_decision_brief(multi_case, request)

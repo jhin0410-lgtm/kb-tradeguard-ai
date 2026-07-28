@@ -228,6 +228,27 @@ def _select_by_ids(records: list, ids: list[str], attribute: str, label: str) ->
     return [by_id[identifier] for identifier in ids]
 
 
+def _select_transaction_linked_by_ids(
+    records: list,
+    ids: list[str],
+    attribute: str,
+    label: str,
+    transaction_id: str,
+) -> list:
+    selected = _select_by_ids(records, ids, attribute, label)
+    mismatched = [
+        getattr(item, attribute)
+        for item in selected
+        if transaction_id not in item.linked_transaction_ids
+    ]
+    if mismatched:
+        raise ValueError(
+            f"Selected {label} IDs are not linked to transaction {transaction_id}: "
+            + ", ".join(mismatched)
+        )
+    return selected
+
+
 def _transaction_signals(
     case: UnifiedCopilotCase, transaction_id: str
 ) -> list[TradeRiskSignal]:
@@ -758,17 +779,19 @@ def build_transaction_decision_brief(
     ):
         raise ValueError("Selected country does not match the counterparty country")
 
-    candidates = _select_by_ids(
+    candidates = _select_transaction_linked_by_ids(
         case.trade_finance.product_candidates,
         request.product_candidate_ids,
         "product_candidate_id",
         "product candidate",
+        request.transaction_id,
     )
-    requirements = _select_by_ids(
+    requirements = _select_transaction_linked_by_ids(
         case.trade_finance.consultation_requirements,
         request.consultation_requirement_ids,
         "requirement_id",
         "consultation requirement",
+        request.transaction_id,
     )
     country_facts = _related_country_facts(case, request.country_code)
     screenings = _related_screenings(case, counterparty, request.country_code)
