@@ -1,1 +1,1 @@
-Trigger checkout-independent registry locator verification, second pass.
+Trigger checkout-independent registry locator verification, final repair pass.
