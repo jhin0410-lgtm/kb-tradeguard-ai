@@ -68,7 +68,26 @@ jobs:
           Get-Content focused-tests.log -Tail 40
           exit 1
       - name: Run full tests except temporary repository-state readiness gate
-        run: python -m pytest -q --ignore=tests/test_competition_readiness.py
+        id: full
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python -m pytest -q --ignore=tests/test_competition_readiness.py *> full-tests.log
+          exit $LASTEXITCODE
+      - name: Upload full-test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-full-test-diagnostics
+          path: full-tests.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Stop after full-test failure
+        if: steps.full.outcome == 'failure'
+        shell: pwsh
+        run: |
+          Get-Content full-tests.log -Tail 60
+          exit 1
       - name: Compile
         run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
       - name: Import applications
