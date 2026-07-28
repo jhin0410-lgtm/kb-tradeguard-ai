@@ -232,6 +232,57 @@ def test_inconsistent_statement_scope_is_rejected():
         analyze_financial_trends(snapshots)
 
 
+@pytest.mark.parametrize(
+    ("field", "label"),
+    [
+        ("corp_code", "corporation code"),
+        ("report_code", "report type"),
+        ("fs_div", "financial-statement scope"),
+    ],
+)
+def test_missing_comparison_scope_metadata_is_rejected(field, label):
+    rows = _statement(
+        assets="100",
+        current_assets="50",
+        liabilities="50",
+        current_liabilities="25",
+        equity="50",
+        revenue="100",
+        operating_profit="10",
+        net_income="5",
+        finance_costs="2",
+        operating_cash_flow="8",
+    )
+    incomplete = _snapshot(2025, rows)
+    incomplete.pop(field)
+
+    with pytest.raises(ValueError, match=label):
+        analyze_financial_trends(
+            {
+                2024: _snapshot(2024, rows),
+                2025: incomplete,
+            }
+        )
+
+
+def test_raw_result_lists_without_scope_metadata_are_rejected():
+    rows = _statement(
+        assets="100",
+        current_assets="50",
+        liabilities="50",
+        current_liabilities="25",
+        equity="50",
+        revenue="100",
+        operating_profit="10",
+        net_income="5",
+        finance_costs="2",
+        operating_cash_flow="8",
+    )
+
+    with pytest.raises(ValueError, match="raw financial result lists"):
+        analyze_financial_trends({2024: rows, 2025: rows})
+
+
 def test_snapshot_year_mismatch_is_rejected():
     with pytest.raises(ValueError, match="does not match"):
         analyze_financial_trends(

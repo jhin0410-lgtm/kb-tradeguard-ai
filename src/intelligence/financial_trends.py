@@ -66,9 +66,12 @@ def _clean_number(value: Any) -> float | None:
 
 def _normalize_snapshot(year: str, value: Any) -> dict[str, Any]:
     if isinstance(value, list):
-        return {"business_year": year, "results": value}
+        raise ValueError(
+            "raw financial result lists lack required comparison metadata; "
+            "provide corp_code, report_code, fs_div, and results for every year"
+        )
     if not isinstance(value, Mapping):
-        raise TypeError("each financial trend snapshot must be a mapping or result list")
+        raise TypeError("each financial trend snapshot must be a mapping")
     snapshot = dict(value)
     stated_year = snapshot.get("business_year")
     if stated_year is not None and _normalize_year(stated_year) != year:
@@ -89,12 +92,18 @@ def _validate_consistent_scope(snapshots: list[dict[str, Any]]) -> None:
         "fs_div": "financial-statement scope",
     }
     for field, label in labels.items():
-        values = {
-            str(snapshot.get(field)).strip()
+        missing_years = [
+            str(snapshot["business_year"])
             for snapshot in snapshots
-            if snapshot.get(field) not in {None, ""}
-        }
-        if len(values) > 1:
+            if snapshot.get(field) in {None, ""}
+        ]
+        if missing_years:
+            raise ValueError(
+                f"multi-year comparison requires {label} metadata for every snapshot; "
+                f"missing for: {', '.join(missing_years)}"
+            )
+        values = {str(snapshot[field]).strip() for snapshot in snapshots}
+        if len(values) != 1:
             raise ValueError(f"multi-year comparison requires one consistent {label}")
 
 
