@@ -1,0 +1,61 @@
+name: one-shot-p1-review-regressions
+
+on:
+  pull_request:
+    branches:
+      - feature/global-trade-copilot-v2
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/global-trade-copilot-v2
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Apply P1 regression tests
+        run: python scripts/tmp_patch_p1_review_regressions.py
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: Run P1 target tests
+        run: python -m pytest -q tests/test_transaction_decision_brief.py tests/test_copilot_execution.py tests/test_copilot_scenarios.py tests/test_single_transaction_pipeline.py
+      - name: Run full tests except temporary repository-state gate
+        run: python -m pytest -q --ignore=tests/test_competition_readiness.py
+      - name: Compile
+        run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+      - name: Import applications
+        run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Validate intended diff
+        shell: pwsh
+        run: |
+          $changed = git diff --name-only
+          $allowed = @(
+            'tests/test_copilot_execution.py',
+            'tests/test_copilot_scenarios.py',
+            'tests/test_single_transaction_pipeline.py'
+          )
+          foreach ($path in $changed) {
+            if ($allowed -notcontains $path) {
+              throw "Unexpected changed path: $path"
+            }
+          }
+          if (-not $changed) {
+            throw 'No P1 regression changes were produced.'
+          }
+      - name: Commit verified P1 regression coverage
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tests/test_copilot_execution.py tests/test_copilot_scenarios.py tests/test_single_transaction_pipeline.py
+          git commit -m 'Strengthen P1 review regression coverage'
+          git push origin HEAD:feature/global-trade-copilot-v2
