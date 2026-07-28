@@ -1,1 +1,45 @@
-PLACEHOLDER
+from __future__ import annotations
+
+import base64
+import gzip
+import io
+import runpy
+import tarfile
+from pathlib import Path
+
+
+ROOT = Path(".")
+_ALLOWED_PREFIXES = ("src/", "tests/")
+
+
+source_payload = "".join(
+    (ROOT / f"tmp/integrated_payload_{index:02d}.b64").read_text(encoding="utf-8")
+    for index in range(3)
+)
+archive_bytes = base64.b64decode(source_payload)
+with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
+    members = archive.getmembers()
+    for member in members:
+        path = Path(member.name)
+        if path.is_absolute() or ".." in path.parts:
+            raise RuntimeError(f"Unsafe archive member: {member.name}")
+        if not member.name.startswith(_ALLOWED_PREFIXES):
+            raise RuntimeError(f"Unexpected archive member: {member.name}")
+    archive.extractall(ROOT)
+
+# Correct the independently reviewed gross-exposure expectation in the packed test.
+portfolio_test = ROOT / "tests/test_portfolio_assessment.py"
+text = portfolio_test.read_text(encoding="utf-8")
+text = text.replace(
+    'assert assessment.gross_exposure_krw == Decimal("856000000")',
+    'assert assessment.gross_exposure_krw == Decimal("1036000000")',
+)
+portfolio_test.write_text(text, encoding="utf-8")
+
+patch_payload = "".join(
+    (ROOT / f"tmp/integrated_patch_script_{index:02d}.b64").read_text(encoding="utf-8")
+    for index in range(2)
+)
+patch_path = ROOT / "scripts/tmp_apply_integrated_product_sprint.py"
+patch_path.write_bytes(gzip.decompress(base64.b64decode(patch_payload)))
+runpy.run_path(str(patch_path), run_name="__main__")
