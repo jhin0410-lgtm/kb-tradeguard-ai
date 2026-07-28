@@ -1,1 +1,1 @@
-trigger integrated product sprint verification v7
+trigger integrated product sprint verification v8
