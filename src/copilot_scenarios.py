@@ -28,6 +28,7 @@ ScenarioReadiness = Literal["ready", "blocked"]
 
 class ScenarioCandidate(BaseModel):
     scenario_id: str
+    source_case_hash: str
     scenario_type: ScenarioType
     name: str
     rationale: str
@@ -59,6 +60,20 @@ class ScenarioProposalSet(BaseModel):
         "Scenario selection may be AI-assisted, but all financial arithmetic and "
         "scenario execution remain authoritative only in deterministic engines."
     )
+
+    @model_validator(mode="after")
+    def candidates_match_proposal_snapshot(self):
+        mismatches = [
+            item.scenario_id
+            for item in self.candidates
+            if item.source_case_hash != self.case_hash
+        ]
+        if mismatches:
+            raise ValueError(
+                "Scenario candidates must reference the proposal-set case snapshot: "
+                + ", ".join(mismatches)
+            )
+        return self
 
     @property
     def ready_candidates(self) -> list[ScenarioCandidate]:
@@ -137,6 +152,7 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
 
     candidates: list[ScenarioCandidate] = []
     material_receivable = _material_receivable(case)
+    source_case_hash = case.case_hash
 
     delay_missing = []
     if material_receivable is None:
@@ -147,11 +163,12 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         "type": "settlement_delay",
         "transaction_id": _transaction_id(material_receivable or {}),
         "delay_days": 30,
-        "case_hash": case.case_hash,
+        "case_hash": source_case_hash,
     }
     candidates.append(
         ScenarioCandidate(
             scenario_id=_stable_id(delay_payload),
+            source_case_hash=source_case_hash,
             scenario_type="settlement_delay",
             name="주요 수출채권 30일 수금 지연",
             rationale=(
@@ -185,11 +202,12 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         "type": "fx_shock",
         "currencies": currencies,
         "shock_percent": -5,
-        "case_hash": case.case_hash,
+        "case_hash": source_case_hash,
     }
     candidates.append(
         ScenarioCandidate(
             scenario_id=_stable_id(fx_payload),
+            source_case_hash=source_case_hash,
             scenario_type="fx_shock",
             name="주요 거래통화 기준환율 5% 하락",
             rationale=(
@@ -218,11 +236,12 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         "type": "import_cost_increase",
         "transaction_ids": [_transaction_id(row) for row in imports if _transaction_id(row)],
         "increase_percent": 10,
-        "case_hash": case.case_hash,
+        "case_hash": source_case_hash,
     }
     candidates.append(
         ScenarioCandidate(
             scenario_id=_stable_id(cost_payload),
+            source_case_hash=source_case_hash,
             scenario_type="import_cost_increase",
             name="수입 결제금액 10% 증가",
             rationale=(
@@ -251,11 +270,12 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         "transaction_id": _transaction_id(material_receivable or {}),
         "delay_days": 30,
         "fx_shock_percent": -5,
-        "case_hash": case.case_hash,
+        "case_hash": source_case_hash,
     }
     candidates.append(
         ScenarioCandidate(
             scenario_id=_stable_id(combined_payload),
+            source_case_hash=source_case_hash,
             scenario_type="combined_stress",
             name="수금 30일 지연 + 기준환율 5% 하락",
             rationale=(
@@ -288,7 +308,7 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
 
     return ScenarioProposalSet(
         case_id=case.identity.case_id,
-        case_hash=case.case_hash,
+        case_hash=source_case_hash,
         analysis_as_of_date=case.identity.analysis_as_of_date,
         candidates=candidates,
     )
@@ -304,6 +324,11 @@ def build_execution_request(
 
     if candidate.readiness != "ready":
         raise ValueError("Blocked scenario candidates cannot be executed.")
+    if candidate.source_case_hash != case.case_hash:
+        raise ValueError(
+            "Scenario candidate was generated from a different case snapshot; "
+            "regenerate and reapprove the scenario before execution."
+        )
     return ScenarioExecutionRequest(
         scenario_id=candidate.scenario_id,
         execution_tool=candidate.execution_tool,
