@@ -308,10 +308,9 @@ def _clear_transaction_product_records(
 
     def belongs_to_transaction(record: Any) -> bool:
         linked = list(getattr(record, "linked_transaction_ids", []) or [])
-        if transaction_id in linked:
-            return True
         source_id = str(getattr(getattr(record, "source", None), "source_id", ""))
-        return not linked and source_id.startswith("TRADE-FINANCE-PRODUCTS-")
+        registry_derived = source_id.startswith("TRADE-FINANCE-PRODUCTS-")
+        return registry_derived and (transaction_id in linked or not linked)
 
     removed_ids = [
         item.product_candidate_id

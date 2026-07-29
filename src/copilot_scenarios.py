@@ -159,12 +159,20 @@ def _usable_fx_currencies(case: UnifiedCopilotCase) -> set[str]:
         return set()
     payload = asset.payload
     if isinstance(payload, dict):
-        if all(isinstance(value, (int, float)) for value in payload.values()):
-            return {
-                str(currency).upper()
-                for currency, value in payload.items()
-                if float(value) > 0
-            }
+        mapping_like = bool(payload) and all(
+            len(str(currency)) == 3 and str(currency).isalpha()
+            for currency in payload
+        )
+        if mapping_like:
+            currencies: set[str] = set()
+            for currency, value in payload.items():
+                try:
+                    usable = value is not None and float(value) > 0
+                except (TypeError, ValueError):
+                    usable = False
+                if usable:
+                    currencies.add(str(currency).upper())
+            return currencies
         payload = [payload]
     currencies: set[str] = set()
     for row in payload:

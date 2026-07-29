@@ -166,6 +166,11 @@ def test_product_cleanup_removes_only_current_transaction_registry_outputs():
         product_or_service_name="Other", product_category="import_finance", matched_need="need",
         candidate_status="insufficient_information", next_action="consult", source=other_source,
     )
+    manual_current = ProductCandidate(
+        product_candidate_id="PC-MANUAL-CURRENT", linked_transaction_ids=["EXP-001"], provider="Advisor",
+        product_or_service_name="Manual reviewed option", product_category="other", matched_need="manual",
+        candidate_status="insufficient_information", next_action="review", source=other_source,
+    )
     requirement = ConsultationRequirement(
         requirement_id="REQ-CURRENT", linked_transaction_ids=["EXP-001"], consultation_route="trade_finance_specialist",
         purpose="confirm", source=registry_source,
@@ -173,12 +178,14 @@ def test_product_cleanup_removes_only_current_transaction_registry_outputs():
     case = UnifiedCopilotCase(
         identity=CaseIdentity(case_id="CASE-PRODUCT-CLEANUP"),
         trade_finance=TradeFinanceDomainState(
-            product_candidates=[current, other], consultation_requirements=[requirement]
+            product_candidates=[current, other, manual_current], consultation_requirements=[requirement]
         ),
     )
     updated, removed = _clear_transaction_product_records(case, "EXP-001")
     assert removed == ["PC-CURRENT", "REQ-CURRENT"]
-    assert [item.product_candidate_id for item in updated.trade_finance.product_candidates] == ["PC-OTHER"]
+    assert [item.product_candidate_id for item in updated.trade_finance.product_candidates] == [
+        "PC-OTHER", "PC-MANUAL-CURRENT"
+    ]
     assert updated.trade_finance.consultation_requirements == []
 
 
@@ -247,3 +254,28 @@ def test_fx_scenario_blocks_when_any_active_currency_lacks_a_rate():
     fx = next(item for item in proposal.candidates if item.scenario_type == "fx_shock")
     assert fx.readiness == "blocked"
     assert any("EUR" in item for item in fx.missing_inputs)
+
+
+def test_fx_scenario_accepts_numeric_string_rate_mapping():
+    case = UnifiedCopilotCase(
+        identity=CaseIdentity(case_id="CASE-FX-STRING"),
+        approved_transactions=[
+            {"transaction_id": "EXP-USD", "transaction_type": "export", "currency": "USD", "amount_fc": 100},
+        ],
+        official_fx_reference=CaseDataAsset(
+            asset_name="FX", status="available", source="fixture", payload={"USD": "1350"},
+        ),
+    )
+    proposal = propose_scenarios(case)
+    fx = next(item for item in proposal.candidates if item.scenario_type == "fx_shock")
+    assert fx.readiness == "ready"
+    assert fx.missing_inputs == []
+
+
+def test_capacity_result_metrics_remain_numeric_for_grounding():
+    analysis = analyze_transaction_capacity(_capacity_case(), _capacity_request())
+    metrics = analysis.calculation.result["metrics"]
+    assert isinstance(metrics["gross_transaction_krw"], float)
+    assert isinstance(metrics["gross_transaction_to_cash_pct"], float)
+    assert analysis.calculation.input_assumptions["amount_fc"] == "500000"
+    assert analysis.calculation.input_assumptions["fx_rate_krw"] == "1350.123456789"

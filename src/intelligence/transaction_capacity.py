@@ -305,7 +305,11 @@ def _metric(
     )
 
 
-def _json_value(value: Decimal | None) -> str | None:
+def _json_value(value: Decimal | None) -> float | None:
+    return float(value) if value is not None else None
+
+
+def _audit_decimal(value: Decimal | None) -> str | None:
     return format(value, "f") if value is not None else None
 
 
@@ -513,8 +517,8 @@ def analyze_transaction_capacity(
                 payment.payment_structure_id if payment is not None else None
             ),
             "transaction_currency": currency,
-            "amount_fc": _json_value(amount_fc),
-            "fx_rate_krw": _json_value(fx_rate),
+            "amount_fc": _audit_decimal(amount_fc),
+            "fx_rate_krw": _audit_decimal(fx_rate),
             "fx_rate_source": (
                 request.fx_rate_source
                 if request.fx_rate_krw is not None
@@ -524,8 +528,8 @@ def analyze_transaction_capacity(
                     else case.official_fx_reference.source
                 )
             ),
-            "protection_percent": _json_value(request.protection_percent),
-            "pre_shipment_funding_need_krw": _json_value(
+            "protection_percent": _audit_decimal(request.protection_percent),
+            "pre_shipment_funding_need_krw": _audit_decimal(
                 request.pre_shipment_funding_need_krw
             ),
             "analysis_basis": "gross transaction scale and explicit residual exposure",
