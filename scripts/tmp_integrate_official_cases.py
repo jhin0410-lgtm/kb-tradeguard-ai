@@ -41,6 +41,40 @@ replace_once(
     "    render_official_case_study_section(presentation_mode=presentation_mode)\n"
     "    render_official_data_section(presentation_mode=presentation_mode)\n",
 )
+
+replace_once(
+    "streamlit_app.py",
+    "from src.competition_ai_boundary_view import render_ai_boundary_section\n",
+    "from src.competition_ai_boundary_view import render_ai_boundary_section\n"
+    "from src.competition_case_study_view import render_official_case_study_section\n"
+    "from src.competition_portfolio_view import render_portfolio_section, render_workflow_map\n",
+)
+replace_once(
+    "streamlit_app.py",
+    "        '<div class=\"tg-section-title\">07 · 검증 현황과 감사 기록</div>',",
+    "        '<div class=\"tg-section-title\">08 · 검증 현황과 감사 기록</div>',",
+)
+replace_once(
+    "streamlit_app.py",
+    "    app._render_hero()\n\n    scenario_id = app._query_scenario_id()\n",
+    "    app._render_hero()\n"
+    "    render_workflow_map()\n\n"
+    "    scenario_id = app._query_scenario_id()\n",
+)
+replace_once(
+    "streamlit_app.py",
+    "    app._render_actions(run, presentation_mode=presentation_mode)\n"
+    "    render_ai_boundary_section(presentation_mode=presentation_mode)\n"
+    "    render_product_consultation_section(run, presentation_mode=presentation_mode)\n"
+    "    render_official_data_section(presentation_mode=presentation_mode)\n",
+    "    app._render_actions(run, presentation_mode=presentation_mode)\n"
+    "    render_portfolio_section(presentation_mode=presentation_mode)\n"
+    "    render_ai_boundary_section(presentation_mode=presentation_mode)\n"
+    "    render_product_consultation_section(run, presentation_mode=presentation_mode)\n"
+    "    render_official_case_study_section(presentation_mode=presentation_mode)\n"
+    "    render_official_data_section(presentation_mode=presentation_mode)\n",
+)
+
 replace_once(
     "src/competition_real_data_view.py",
     "'<div class=\"tg-section-title\">06 · 실제 공식 데이터 연결</div>'",
