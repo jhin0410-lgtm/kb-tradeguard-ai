@@ -1,0 +1,168 @@
+name: temporary-final-release-gate
+
+on:
+  pull_request:
+    branches:
+      - release/v1.2.0-final-gate
+
+permissions:
+  contents: write
+
+jobs:
+  verify-smoke-release:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      TARGET_SHA: b22356180b4f65843ffa996eac45275e0e34f8c7
+      RELEASE_TAG: v1.2.0-competition
+      PUBLIC_DEMO_URL: https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/?presentation=true
+      KEXIM_API_KEY: ${{ secrets.KEXIM_API_KEY }}
+      KCS_TRADE_API_KEY: ${{ secrets.KCS_TRADE_API_KEY }}
+      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+      BOK_ECOS_API_KEY: ${{ secrets.BOK_ECOS_API_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+      NTS_BUSINESS_API_KEY: ${{ secrets.NTS_BUSINESS_API_KEY }}
+      TRADEGUARD_SMOKE_DART_CORP_CODE: ${{ secrets.TRADEGUARD_SMOKE_DART_CORP_CODE }}
+      TRADEGUARD_SMOKE_DART_BUSINESS_YEAR: ${{ secrets.TRADEGUARD_SMOKE_DART_BUSINESS_YEAR }}
+      TRADEGUARD_SMOKE_BUSINESS_NUMBER: ${{ secrets.TRADEGUARD_SMOKE_BUSINESS_NUMBER }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b22356180b4f65843ffa996eac45275e0e34f8c7
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - name: Verify exact release commit
+        shell: pwsh
+        run: |
+          $actual = git rev-parse HEAD
+          if ($actual -ne $env:TARGET_SHA) { throw "Expected $env:TARGET_SHA, got $actual" }
+      - name: Public repository safety
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          python scripts/public_repo_safety_check.py | Tee-Object -FilePath artifacts/public-repo-safety.json
+          exit $LASTEXITCODE
+      - name: Competition readiness
+        shell: pwsh
+        run: |
+          python scripts/competition_readiness_check.py | Tee-Object -FilePath artifacts/competition-readiness.txt
+          exit $LASTEXITCODE
+      - name: Full pytest suite
+        shell: pwsh
+        run: |
+          python -m pytest -q 2>&1 | Tee-Object -FilePath artifacts/pytest-output.txt
+          exit $LASTEXITCODE
+      - name: Compile and import applications
+        run: |
+          python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+          python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Sanitize and verify live official-data paths
+        shell: pwsh
+        run: |
+          python scripts/official_data_smoke_test.py `
+            --output-report artifacts/official-data-live-smoke.json `
+            --output-snapshots artifacts/official-context-snapshots.json
+      - name: Install deployment smoke browser
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Verify public Streamlit deployment
+        shell: pwsh
+        run: |
+          @'
+          import json
+          import os
+          import re
+          import time
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          output = Path("artifacts")
+          output.mkdir(exist_ok=True)
+          url = os.environ["PUBLIC_DEMO_URL"]
+          result = {"url": url, "status": "failed", "case_card_count": 0, "title": None}
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page(viewport={"width": 1440, "height": 1000})
+              try:
+                  page.goto(url, wait_until="domcontentloaded", timeout=120_000)
+                  deadline = time.time() + 180
+                  while time.time() < deadline:
+                      body = page.locator("body").inner_text()
+                      if "gone to sleep" in body.lower() or "wake" in body.lower():
+                          for label in ("Yes, get this app back up!", "Wake up", "Get this app back up"):
+                              button = page.get_by_role("button", name=re.compile(re.escape(label), re.I))
+                              if button.count():
+                                  button.first.click()
+                                  break
+                      if "KB TradeGuard AI" in body and page.locator(".tg-case-card").count() == 3:
+                          break
+                      page.wait_for_timeout(3000)
+                  body = page.locator("body").inner_text()
+                  count = page.locator(".tg-case-card").count()
+                  required = ["KB TradeGuard AI", "실제 공개데이터 사례 3개", "금융지원"]
+                  missing = [item for item in required if item not in body]
+                  if count != 3 or missing:
+                      raise RuntimeError(f"Deployment content mismatch: cards={count}, missing={missing}")
+                  page.screenshot(path=str(output / "public-demo-final.png"), full_page=True)
+                  result.update(status="passed", case_card_count=count, title=page.title())
+              except Exception as exc:
+                  result["error"] = str(exc)
+                  page.screenshot(path=str(output / "public-demo-failure.png"), full_page=True)
+                  raise
+              finally:
+                  (output / "deployment-smoke.json").write_text(
+                      json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+                  )
+                  browser.close()
+          '@ | Set-Content -Encoding UTF8 artifacts/deployment_smoke.py
+          python artifacts/deployment_smoke.py
+      - name: Create competition release
+        shell: pwsh
+        run: |
+          @'
+          # KB TradeGuard AI v1.2.0 Competition Release
+
+          Final competition release pinned to commit `b22356180b4f65843ffa996eac45275e0e34f8c7`.
+
+          ## Included
+          - Deterministic single-transaction and multi-transaction portfolio assessment
+          - 21 governed trade-finance consultation candidates
+          - Seven official-data adapter surfaces and three pinned real public-data context cases
+          - Fail-closed official-data refresh and transaction-capacity boundaries
+          - Reviewed Decision Brief, Action Plan, audit exports, and grounded AI boundary
+          - Desktop/mobile public competition interface
+
+          ## Verification
+          - Public repository safety passed
+          - Competition readiness 1.6 passed
+          - Full pytest suite passed
+          - Compile-all and all application imports passed
+          - Sanitized official-data live smoke executed
+          - Public Streamlit deployment smoke passed
+          - Final Codex review produced no new findings and reacted 👍
+
+          ## Boundary
+          This is an independent competition prototype. It does not provide bank approval, executable pricing, product eligibility, legal advice, sanctions/AML clearance, insurance acceptance, guarantee issuance, or guaranteed outcomes.
+          '@ | Set-Content -Encoding UTF8 release-notes.md
+          if (gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY 2>$null) {
+            gh release edit $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --target $env:TARGET_SHA --title "KB TradeGuard AI v1.2.0 Competition Release" --notes-file release-notes.md
+          } else {
+            gh release create $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --target $env:TARGET_SHA --title "KB TradeGuard AI v1.2.0 Competition Release" --notes-file release-notes.md
+          }
+          gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json url,tagName,targetCommitish,publishedAt | Out-File -Encoding utf8 artifacts/release.json
+      - name: Upload final release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-competition-release-evidence
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
