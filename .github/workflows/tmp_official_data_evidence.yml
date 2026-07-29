@@ -1,0 +1,52 @@
+name: temporary-official-data-evidence
+
+on:
+  pull_request:
+    branches:
+      - feature/global-trade-copilot-v2
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      KEXIM_API_KEY: ${{ secrets.KEXIM_API_KEY }}
+      KCS_TRADE_API_KEY: ${{ secrets.KCS_TRADE_API_KEY }}
+      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+      BOK_ECOS_API_KEY: ${{ secrets.BOK_ECOS_API_KEY }}
+      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
+      NTS_BUSINESS_API_KEY: ${{ secrets.NTS_BUSINESS_API_KEY }}
+      TRADEGUARD_SMOKE_DART_CORP_CODE: ${{ secrets.TRADEGUARD_SMOKE_DART_CORP_CODE }}
+      TRADEGUARD_SMOKE_DART_BUSINESS_YEAR: ${{ secrets.TRADEGUARD_SMOKE_DART_BUSINESS_YEAR }}
+      TRADEGUARD_SMOKE_BUSINESS_NUMBER: ${{ secrets.TRADEGUARD_SMOKE_BUSINESS_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/global-trade-copilot-v2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - name: Run focused offline contracts
+        run: python -m pytest -q tests/test_official_case_studies.py tests/test_official_data_hub.py
+      - name: Collect live official evidence
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          python scripts/official_data_smoke_test.py `
+            --output-report artifacts/official-data-live-smoke.json `
+            --output-snapshots artifacts/official-context-snapshots.json
+      - name: Upload sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: official-data-live-evidence
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7
