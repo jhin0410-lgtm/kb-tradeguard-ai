@@ -1,0 +1,397 @@
+{
+  "registry_name": "KB TradeGuard reviewed trade-finance product registry",
+  "registry_version": "trade-finance-products/1.0",
+  "effective_date": "2026-07-26",
+  "authority_boundary": "Public product information is used only to generate consultation candidates. The registry does not determine eligibility, approval, pricing, limits, insurance acceptance, guarantee issuance, suitability, or current branch-level availability.",
+  "official_sources": [
+    {
+      "source_id": "KSURE-OVERSEAS-COMPANY-CREDIT-INVESTIGATION",
+      "provider": "K-SURE",
+      "source_name": "국외기업 신용조사 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-113/web.do"
+    },
+    {
+      "source_id": "KSURE-SHORT-TERM-EXPORT-INSURANCE-POST-SHIPMENT",
+      "provider": "K-SURE",
+      "source_name": "단기수출보험(선적후) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-117/web.do"
+    },
+    {
+      "source_id": "KSURE-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT",
+      "provider": "K-SURE",
+      "source_name": "수출신용보증(선적전) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-166/web.do"
+    },
+    {
+      "source_id": "KSURE-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT-DOCUMENTS",
+      "provider": "K-SURE",
+      "source_name": "수출신용보증(선적전) 신청서류",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-168/web.do"
+    },
+    {
+      "source_id": "KSURE-DIRECT-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT",
+      "provider": "K-SURE",
+      "source_name": "수출신용보증(다이렉트-선적전) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-776/web.do"
+    },
+    {
+      "source_id": "KSURE-EXPORT-CREDIT-GUARANTEE-POST-SHIPMENT",
+      "provider": "K-SURE",
+      "source_name": "수출신용보증(선적후) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-170/web.do"
+    },
+    {
+      "source_id": "KSURE-EXPORT-CREDIT-GUARANTEE-PURCHASE",
+      "provider": "K-SURE",
+      "source_name": "수출신용보증(매입) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-176/web.do"
+    },
+    {
+      "source_id": "KSURE-FX-FLUCTUATION-INSURANCE",
+      "provider": "K-SURE",
+      "source_name": "환변동보험 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-250/web.do"
+    },
+    {
+      "source_id": "KSURE-IMPORT-INSURANCE-GLOBAL-SUPPLY-CHAIN",
+      "provider": "K-SURE",
+      "source_name": "수입보험(글로벌공급망) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-281/web.do"
+    },
+    {
+      "source_id": "KSURE-IMPORT-INSURANCE-IMPORTER",
+      "provider": "K-SURE",
+      "source_name": "수입보험(수입자용) 제도개요",
+      "source_url": "https://ksure.or.kr/rh-kr/cntnts/i-268/web.do"
+    },
+    {
+      "source_id": "KB-EXPORT-ENTERPRISE-PREFERENTIAL-LOAN-DISCLOSURE",
+      "provider": "KB Kookmin Bank",
+      "source_name": "KB국민은행 기업대출 상품공시",
+      "source_url": "https://obank.kbstar.com/quics?page=C043830"
+    }
+  ],
+  "products": [
+    {
+      "product_id": "KSURE-BUYER-CREDIT-INVESTIGATION",
+      "provider": "K-SURE",
+      "product_name": "국외기업 신용조사",
+      "product_category": "buyer_credit_investigation",
+      "need_codes": ["buyer_credit_investigation"],
+      "transaction_directions": ["export", "import"],
+      "transaction_stages": ["pre_contract", "pre_shipment", "pre_payment", "ongoing"],
+      "company_sizes": ["sme", "mid_market", "large", "unknown"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "해외소재 기업의 기본정보와 재무정보 등에 대한 신용조사 보고서를 제공하는 서비스",
+        "기존 6개월 이내 보고서가 있으면 기존 자료 구매가 가능하고, 신규조사는 별도 기간이 소요될 수 있음"
+      ],
+      "unresolved_conditions": [
+        "조사대상 법인의 정확한 법인명·주소·등록번호 확인",
+        "기존 보고서 보유 여부와 신규조사 필요 여부",
+        "현지 사정에 따른 재무자료 입수 가능성",
+        "현재 수수료와 실제 처리기간"
+      ],
+      "required_documents": [
+        "바이어 또는 해외 공급자의 정확한 법인명",
+        "국가와 주소",
+        "등록번호 또는 식별 가능한 기업정보"
+      ],
+      "next_action": "K-SURE ON에서 기존 보고서 조회 또는 신규 국외기업 신용조사를 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-OVERSEAS-COMPANY-CREDIT-INVESTIGATION"]
+    },
+    {
+      "product_id": "KSURE-SHORT-TERM-EXPORT-INSURANCE-POST-SHIPMENT",
+      "provider": "K-SURE",
+      "product_name": "단기수출보험(선적후)",
+      "product_category": "trade_credit_insurance",
+      "need_codes": ["export_receivable_nonpayment_protection"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["pre_contract", "pre_shipment", "post_shipment", "ongoing"],
+      "company_sizes": ["sme", "mid_market", "large", "unknown"],
+      "max_tenor_days": 730,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "결제기간 2년 이하 수출계약의 선적 후 대금 미회수 손실을 담보하는 제도",
+        "수입자 또는 L/C 거래의 개설은행 관련 신용위험과 비상위험을 대상으로 함",
+        "실제 인수는 수출자·수입자 등급과 국별인수방침 등에 따라 달라질 수 있음"
+      ],
+      "unresolved_conditions": [
+        "수출자와 수입자의 K-SURE 신용등급",
+        "수입국 국별인수방침과 한도",
+        "거래형태·결제조건·보험요율·부보율",
+        "면책사항과 수출통지 의무"
+      ],
+      "required_documents": [
+        "수출계약 또는 발주서",
+        "바이어 정보",
+        "결제조건과 결제기간",
+        "선적 및 청구 관련 서류"
+      ],
+      "next_action": "바이어 신용조사와 국별인수방침을 확인한 뒤 단기수출보험 가입 가능성을 K-SURE에 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-SHORT-TERM-EXPORT-INSURANCE-POST-SHIPMENT"]
+    },
+    {
+      "product_id": "KSURE-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT",
+      "provider": "K-SURE",
+      "product_name": "수출신용보증(선적전)",
+      "product_category": "export_guarantee_pre_shipment",
+      "need_codes": ["pre_shipment_working_capital", "export_working_capital"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["pre_contract", "pre_shipment", "ongoing"],
+      "company_sizes": ["sme", "mid_market"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "중소·중견기업이 수출물품 제조·가공·조달에 필요한 자금을 금융기관에서 대출받을 때 K-SURE가 보증하는 제도",
+        "무역금융, 수출자금, 무역어음, 수출용원자재 수입신용장 등 공개된 보증대상 자금 범주가 존재함"
+      ],
+      "unresolved_conditions": [
+        "K-SURE 신용평가와 보증금지·제한 사유",
+        "은행의 대출심사와 자금용도 인정 여부",
+        "보증한도·보증비율·보증료",
+        "선적전 보증을 취급할 금융기관과 실제 연계조건"
+      ],
+      "required_documents": [
+        "수출신용보증 청약서",
+        "상사현황표",
+        "금융기관거래상황확인서",
+        "수출실적확인서",
+        "최근 재무자료와 수출계약 근거"
+      ],
+      "next_action": "K-SURE와 거래은행에 수출계약·자금용도·필요금액을 제시하고 선적전 보증 및 대출 가능성을 공동 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": [
+        "KSURE-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT",
+        "KSURE-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT-DOCUMENTS"
+      ]
+    },
+    {
+      "product_id": "KSURE-DIRECT-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT",
+      "provider": "K-SURE",
+      "product_name": "수출신용보증(다이렉트-선적전)",
+      "product_category": "export_guarantee_pre_shipment",
+      "need_codes": ["pre_shipment_working_capital"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["pre_shipment"],
+      "company_sizes": ["sme"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": [],
+      "supported_banks": ["신한은행", "하나은행", "토스뱅크"],
+      "public_conditions": [
+        "수출초보 중소기업을 위한 비대면 선적전 보증 상품",
+        "공식 안내상 이용은행은 신한은행·하나은행·토스뱅크로 명시됨"
+      ],
+      "unresolved_conditions": [
+        "수출초보 중소기업 및 자동심사 이용요건",
+        "현재 이용가능 은행 목록의 최신성",
+        "보증한도와 대출조건"
+      ],
+      "required_documents": [
+        "온라인 보증 및 대출신청에 필요한 기업정보",
+        "수출실적과 수출계약 근거"
+      ],
+      "next_action": "공식 이용은행 중 선택 가능한 은행과 K-SURE ON의 현재 자동심사 요건을 확인한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-DIRECT-EXPORT-CREDIT-GUARANTEE-PRE-SHIPMENT"]
+    },
+    {
+      "product_id": "KSURE-EXPORT-CREDIT-GUARANTEE-POST-SHIPMENT",
+      "provider": "K-SURE",
+      "product_name": "수출신용보증(선적후)",
+      "product_category": "export_guarantee_post_shipment",
+      "need_codes": ["post_shipment_receivables_financing"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["post_shipment"],
+      "company_sizes": ["sme", "mid_market", "large", "unknown"],
+      "max_tenor_days": 730,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "선적 후 금융기관이 선적서류를 근거로 수출채권을 매입하는 경우 K-SURE가 보증하는 제도",
+        "공개 안내상 결제기간 2년 이내 일반수출·위탁가공무역이 대상이며 단기수출보험 연계가입이 필수"
+      ],
+      "unresolved_conditions": [
+        "수출자 신용상태와 K-SURE 내부 제한사유",
+        "수입자·수입국 위험과 보험한도",
+        "은행의 채권매입 및 대출심사",
+        "보증비율·보증료·연계보험 조건"
+      ],
+      "required_documents": [
+        "수출신용보증 청약서",
+        "수출계약과 선적서류",
+        "수출거래실적증명서",
+        "금융기관거래상황확인서"
+      ],
+      "next_action": "선적서류와 채권 만기를 준비하여 거래은행과 K-SURE에 선적후 보증 및 연계보험 구조를 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-EXPORT-CREDIT-GUARANTEE-POST-SHIPMENT"]
+    },
+    {
+      "product_id": "KSURE-EXPORT-CREDIT-GUARANTEE-PURCHASE",
+      "provider": "K-SURE",
+      "product_name": "수출신용보증(매입)",
+      "product_category": "receivables_financing",
+      "need_codes": ["post_shipment_receivables_financing"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["post_shipment"],
+      "company_sizes": ["sme", "mid_market"],
+      "max_tenor_days": 360,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "선적 후 금융기관이 수출채권을 매입하는 경우 K-SURE가 연대보증하는 제도",
+        "공개 안내상 결제기일 360일 이내 일반수출·위탁가공무역·중계무역이 대상",
+        "단기수출보험 연계가입은 선택사항이며 최종상환책임은 수출자에게 있음"
+      ],
+      "unresolved_conditions": [
+        "수출자·수입자 신용등급과 결제조건",
+        "통관 또는 비통관 거래구조",
+        "은행의 매입외환 심사와 소구조건",
+        "보증한도·보증비율·보증료"
+      ],
+      "required_documents": [
+        "수출계약과 선적서류",
+        "수출채권 및 결제기일 정보",
+        "수출거래실적증명서",
+        "금융기관거래상황확인서"
+      ],
+      "next_action": "거래은행에 수출채권 매입 가능 여부를 확인하고 K-SURE 매입보증과 보험 연계 여부를 비교한다.",
+      "consultation_route": "trade_finance_specialist",
+      "official_source_ids": ["KSURE-EXPORT-CREDIT-GUARANTEE-PURCHASE"]
+    },
+    {
+      "product_id": "KSURE-FX-FLUCTUATION-INSURANCE",
+      "provider": "K-SURE",
+      "product_name": "환변동보험",
+      "product_category": "foreign_exchange_hedging",
+      "need_codes": ["fx_cashflow_certainty"],
+      "transaction_directions": ["export", "import"],
+      "transaction_stages": ["pre_contract", "pre_shipment", "post_shipment", "pre_payment", "ongoing"],
+      "company_sizes": ["sme", "mid_market"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": [],
+      "supported_banks": [],
+      "public_conditions": [
+        "수출 또는 수입 과정의 외화금액을 원화로 사전에 확정하여 환위험을 관리하는 제도",
+        "일반형·부분보장 옵션형·완전보장 옵션형은 상승이익 납부와 보상구조가 서로 다름"
+      ],
+      "unresolved_conditions": [
+        "대상통화·거래금액·결제일과 청약 가능기간",
+        "일반형과 옵션형의 비용·상승이익 처리 차이",
+        "현재 보험료와 보장한도",
+        "선물환 등 은행 헤지수단과의 중복 및 비교"
+      ],
+      "required_documents": [
+        "외화 수출입계약 또는 예상 현금흐름",
+        "통화·금액·결제예정일",
+        "기존 헤지계약과 외화현금 정보"
+      ],
+      "next_action": "환노출 금액과 만기를 확정한 뒤 K-SURE 환변동보험 유형과 은행 선물환을 비용·상승이익·잔여위험 기준으로 비교한다.",
+      "consultation_route": "foreign_exchange_specialist",
+      "official_source_ids": ["KSURE-FX-FLUCTUATION-INSURANCE"]
+    },
+    {
+      "product_id": "KSURE-IMPORT-INSURANCE-GLOBAL-SUPPLY-CHAIN",
+      "provider": "K-SURE",
+      "product_name": "수입보험(글로벌공급망)",
+      "product_category": "import_finance",
+      "need_codes": ["import_working_capital"],
+      "transaction_directions": ["import"],
+      "transaction_stages": ["pre_payment", "ongoing"],
+      "company_sizes": ["sme", "mid_market"],
+      "max_tenor_days": 365,
+      "required_industry_tags_any": ["materials_parts_equipment", "root_industry", "defense"],
+      "supported_banks": [],
+      "public_conditions": [
+        "소부장·뿌리·방위산업 중소중견기업의 수입자금 대출 또는 지급보증 관련 금융기관 손실을 보상하는 제도",
+        "공개 안내상 대출기간 1년 이내이며 제외 물품과 거래유형이 존재함"
+      ],
+      "unresolved_conditions": [
+        "기업 업종과 지원대상 해당 여부",
+        "수입품목 HS코드와 제외물품 여부",
+        "중계무역·내국신용장·Standby L/C 등 제외거래 여부",
+        "은행 대출심사와 보험 인수조건"
+      ],
+      "required_documents": [
+        "수입계약과 품목 HS코드",
+        "기업 업종 증빙",
+        "수입자금 용도와 대출기간",
+        "해외 공급자 및 결제조건 정보"
+      ],
+      "next_action": "품목 HS코드와 업종을 확인한 뒤 거래은행과 K-SURE에 글로벌공급망 수입보험 및 수입자금 대출 구조를 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-IMPORT-INSURANCE-GLOBAL-SUPPLY-CHAIN"]
+    },
+    {
+      "product_id": "KSURE-IMPORT-INSURANCE-IMPORTER",
+      "provider": "K-SURE",
+      "product_name": "수입보험(수입자용)",
+      "product_category": "import_finance",
+      "need_codes": ["import_advance_payment_protection"],
+      "transaction_directions": ["import"],
+      "transaction_stages": ["pre_payment"],
+      "company_sizes": ["sme", "mid_market", "large", "unknown"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": ["strategic_resources"],
+      "supported_banks": [],
+      "public_conditions": [
+        "주요 전략물자 등의 선급금 지급조건 수입거래에서 선급금 미회수 손실을 담보하는 제도",
+        "해외 공급자 신용조사와 보험청약 절차가 요구됨"
+      ],
+      "unresolved_conditions": [
+        "수입품목이 대상 전략물자에 해당하는지",
+        "해외 공급자 신용도와 국가위험",
+        "선급금 비율·보험가액·보상범위",
+        "현재 인수조건과 제외사항"
+      ],
+      "required_documents": [
+        "선급금 조건이 포함된 수입계약",
+        "품목과 전략물자 해당 근거",
+        "해외 공급자 식별정보",
+        "선급금 지급일정"
+      ],
+      "next_action": "해외 공급자 신용조사와 품목 대상 여부를 확인한 뒤 선급금 위험에 대한 수입보험 가입 가능성을 상담한다.",
+      "consultation_route": "ksure",
+      "official_source_ids": ["KSURE-IMPORT-INSURANCE-IMPORTER"]
+    },
+    {
+      "product_id": "KB-EXPORT-ENTERPRISE-PREFERENTIAL-LOAN",
+      "provider": "KB Kookmin Bank",
+      "product_name": "KB 수출기업 우대대출",
+      "product_category": "working_capital",
+      "need_codes": ["pre_shipment_working_capital", "export_working_capital"],
+      "transaction_directions": ["export"],
+      "transaction_stages": ["pre_contract", "pre_shipment", "ongoing"],
+      "company_sizes": ["sme", "mid_market", "large", "unknown"],
+      "max_tenor_days": null,
+      "required_industry_tags_any": [],
+      "supported_banks": ["KB국민은행"],
+      "public_conditions": [
+        "KB국민은행 기업대출 상품공시실에 KB 수출기업 우대대출이 공시되어 있음"
+      ],
+      "unresolved_conditions": [
+        "현재 판매상태와 정확한 대상기업 정의",
+        "대출한도·기간·금리·담보 및 보증조건",
+        "수출실적·수출계약·자금용도 인정기준",
+        "K-SURE 보증과의 실제 연계 가능성",
+        "KB 내부 신용심사와 거래조건"
+      ],
+      "required_documents": [
+        "기업 기본정보와 최근 재무자료",
+        "수출실적과 수출계약 또는 발주서",
+        "필요자금 산출근거와 자금용도",
+        "기존 차입금 및 담보·보증 현황"
+      ],
+      "next_action": "KB 기업금융 담당자에게 수출계약·필요자금·상환재원을 제시하고 상품 판매상태, 대상조건, K-SURE 연계 가능성을 확인한다.",
+      "consultation_route": "bank_relationship_manager",
+      "official_source_ids": ["KB-EXPORT-ENTERPRISE-PREFERENTIAL-LOAN-DISCLOSURE"]
+    }
+  ]
+}

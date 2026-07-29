@@ -1,0 +1,70 @@
+{
+  "dataset_name": "synthetic-document-extraction-example",
+  "dataset_version": "1.0",
+  "created_date": "2026-07-28",
+  "schema_version": "document-extraction-evaluation/1.0",
+  "extraction_system_name": "example-parser",
+  "extraction_system_version": "0.1",
+  "adjudication_notes": "Synthetic format example only; do not report as external accuracy.",
+  "cases": [
+    {
+      "case_id": "EXAMPLE-INVOICE-001",
+      "document_type": "commercial_invoice",
+      "language": "en",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_locator": "synthetic://example-invoice-001",
+      "source_license_or_authorization": "project-authored synthetic fixture",
+      "reviewer_count": 1,
+      "fields": [
+        {
+          "field_name": "currency",
+          "expected_value": "USD",
+          "predicted_value": "usd",
+          "prediction_status": "extracted",
+          "comparison_mode": "normalized_text"
+        },
+        {
+          "field_name": "amount",
+          "expected_value": "125000.00",
+          "predicted_value": 125000,
+          "prediction_status": "extracted",
+          "comparison_mode": "number"
+        },
+        {
+          "field_name": "purchase_order_number",
+          "expected_value": null,
+          "predicted_value": null,
+          "prediction_status": "missing",
+          "comparison_mode": "exact"
+        }
+      ]
+    },
+    {
+      "case_id": "EXAMPLE-LC-001",
+      "document_type": "letter_of_credit",
+      "language": "en",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_locator": "synthetic://example-lc-001",
+      "source_license_or_authorization": "project-authored synthetic fixture",
+      "reviewer_count": 1,
+      "fields": [
+        {
+          "field_name": "availability_type",
+          "expected_value": "acceptance",
+          "predicted_value": "acceptance",
+          "prediction_status": "extracted",
+          "comparison_mode": "exact"
+        },
+        {
+          "field_name": "acceptance_party",
+          "expected_value": "issuing bank",
+          "predicted_value": null,
+          "prediction_status": "abstained",
+          "comparison_mode": "normalized_text"
+        }
+      ]
+    }
+  ]
+}

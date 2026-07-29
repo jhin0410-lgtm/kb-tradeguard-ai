@@ -1,0 +1,113 @@
+{
+  "package_version": "single-transaction-package/1.0",
+  "case": {
+    "identity": {
+      "case_id": "CASE-PACKAGE-EXAMPLE-001",
+      "company_name": "Example Exporter Co., Ltd.",
+      "analysis_as_of_date": "2026-07-26"
+    },
+    "approved_transactions": [
+      {
+        "transaction_id": "EXP-001",
+        "transaction_type": "export",
+        "currency": "USD",
+        "amount_fc": 500000,
+        "expected_date": "2026-10-31"
+      }
+    ],
+    "trade_finance": {
+      "counterparties": [
+        {
+          "counterparty_id": "BUYER-VN-001",
+          "legal_name": "Vietnam Buyer Co., Ltd.",
+          "country_code": "VN",
+          "registration_number": "VN-REG-001",
+          "relationship_status": "new",
+          "due_diligence_status": "professional_credit_investigation_completed",
+          "prior_payment_history": "positive",
+          "source": {
+            "source_id": "SRC-BUYER-EXAMPLE",
+            "source_name": "Reviewed example counterparty record",
+            "source_tier": "user_provided",
+            "source_kind": "user_document",
+            "source_locator": "example://counterparty",
+            "as_of_date": "2026-07-26",
+            "effective_date_verified": true
+          },
+          "record_status": "verified",
+          "limitations": [
+            "Synthetic package example; not a real counterparty conclusion."
+          ]
+        }
+      ],
+      "country_risk_facts": [
+        {
+          "fact_id": "COUNTRY-VN-GDP-EXAMPLE",
+          "country_code": "VN",
+          "dimension": "macroeconomic",
+          "metric_name": "GDP growth",
+          "value": "7.09",
+          "unit": "% annual growth",
+          "observation_date": "2024-12-31",
+          "risk_direction": "lower_is_worse",
+          "interpretation": "Synthetic macroeconomic context for package validation only.",
+          "source": {
+            "source_id": "SRC-WB-EXAMPLE",
+            "source_name": "Synthetic World Bank-style observation",
+            "source_tier": "tier_1",
+            "source_kind": "official_api",
+            "source_locator": "example://world-bank",
+            "as_of_date": "2024-12-31",
+            "effective_date_verified": true
+          },
+          "record_status": "verified",
+          "limitations": [
+            "Example value; use the live governed provider for a real assessment."
+          ]
+        }
+      ],
+      "compliance_screenings": [
+        {
+          "screening_id": "SCREEN-BUYER-VN-EXAMPLE",
+          "subject_type": "counterparty",
+          "subject_id": "BUYER-VN-001",
+          "subject_name": "Vietnam Buyer Co., Ltd.",
+          "screening_type": "sanctions",
+          "result": "clear",
+          "method": "exact",
+          "matched_entries": [],
+          "reviewed_by_human": false,
+          "source": {
+            "source_id": "SRC-SANCTIONS-EXAMPLE",
+            "source_name": "Synthetic sanctions-screening result",
+            "source_tier": "tier_1",
+            "source_kind": "official_publication",
+            "source_locator": "example://sanctions",
+            "as_of_date": "2026-07-26",
+            "effective_date_verified": true
+          },
+          "record_status": "verified",
+          "limitations": [
+            "Synthetic clear result; not a real sanctions or AML clearance."
+          ]
+        }
+      ]
+    }
+  },
+  "request": {
+    "pipeline_id": "PIPELINE-PACKAGE-EXAMPLE-001",
+    "brief_id": "BRIEF-PACKAGE-EXAMPLE-001",
+    "transaction_id": "EXP-001",
+    "counterparty_id": "BUYER-VN-001",
+    "country_code": "VN",
+    "reconciliation_policy": {},
+    "capacity_request": null,
+    "product_profiles": [],
+    "max_ranked_concerns": 5
+  },
+  "expected_input_case_hash": null,
+  "notes": [
+    "Minimal package example intentionally omits payment, document, capacity, and product inputs.",
+    "Expected result is additional_information_required with the first four pipeline stages skipped."
+  ]
+}

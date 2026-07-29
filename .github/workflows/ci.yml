@@ -4,17 +4,56 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.txt
-      - run: python -m pytest -q
-      - run: python -m compileall -q app.py src tests scripts
-      - run: python -c "import app; import src"
+      - name: Public repository safety
+        shell: pwsh
+        run: |
+          python scripts/public_repo_safety_check.py > public_repo_safety_report.json
+          $code = $LASTEXITCODE
+          Get-Content public_repo_safety_report.json
+          exit $code
+      - name: Upload public safety report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-repo-safety-report
+          path: public_repo_safety_report.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - run: python scripts/competition_readiness_check.py
+      - name: Run pytest
+        shell: pwsh
+        run: |
+          python -m pytest -q 2>&1 | Tee-Object -FilePath pytest-output.txt
+          $code = $LASTEXITCODE
+          exit $code
+      - name: Upload pytest output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-output
+          path: pytest-output.txt
+          if-no-files-found: ignore
+          retention-days: 7
+      - run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+      - run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"

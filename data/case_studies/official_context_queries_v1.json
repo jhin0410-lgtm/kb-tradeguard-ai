@@ -1,0 +1,39 @@
+{
+  "manifest_version": "official-context-queries/1.0",
+  "authority_boundary": "These cases combine synthetic decision questions with real aggregate public data. They do not describe a real customer, buyer, shipment, customs declaration, credit decision, product approval, or executable foreign-exchange quote.",
+  "cases": [
+    {
+      "case_id": "VN-ELECTRONICS-EXPORT-CONTEXT",
+      "title": "베트남 전기·전자 수출 맥락",
+      "decision_question": "베트남으로 전기·전자 품목을 수출하려는 합성 중소기업이 국가 거시상황과 한국의 해당 품목 수출 흐름을 함께 확인한다.",
+      "country_code": "VN",
+      "hs_code": "85",
+      "trade_flow_code": "X",
+      "comtrade_period": "2024",
+      "trade_start_yymm": "202501",
+      "trade_end_yymm": "202512"
+    },
+    {
+      "case_id": "US-COSMETICS-EXPORT-CONTEXT",
+      "title": "미국 화장품 수출 맥락",
+      "decision_question": "미국으로 화장품류를 수출하려는 합성 중소기업이 미국 거시지표와 한국의 HS 33 수출 통계를 검토한다.",
+      "country_code": "US",
+      "hs_code": "33",
+      "trade_flow_code": "X",
+      "comtrade_period": "2024",
+      "trade_start_yymm": "202501",
+      "trade_end_yymm": "202512"
+    },
+    {
+      "case_id": "JP-MACHINERY-IMPORT-CONTEXT",
+      "title": "일본 기계류 수입 맥락",
+      "decision_question": "일본에서 기계류를 수입하려는 합성 중소기업이 일본 거시지표와 한국의 HS 84 수입 통계를 검토한다.",
+      "country_code": "JP",
+      "hs_code": "84",
+      "trade_flow_code": "M",
+      "comtrade_period": "2024",
+      "trade_start_yymm": "202501",
+      "trade_end_yymm": "202512"
+    }
+  ]
+}

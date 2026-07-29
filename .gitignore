@@ -2,31 +2,85 @@
 .env
 .env.*
 !.env.example
+.envrc
+*.local
+*.local.json
+*.local.yaml
+*.local.yml
+secrets.*
+!secrets.example.*
+credentials.json
+service-account*.json
 *.pem
 *.key
+*.p12
+*.pfx
+*.jks
+*.keystore
 
-# Python and test artifacts
+# Streamlit secrets and local state
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+.streamlit/config.local.toml
+
+# Python environments, packaging, and caches
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 .mypy_cache/
+.pyright/
 .ruff_cache/
+.tox/
+.nox/
 .venv/
 venv/
+env/
+build/
+dist/
+*.egg-info/
+.ipynb_checkpoints/
 
-# Streamlit and local evidence output
-.streamlit/secrets.toml
-evidence/provider_smoke_redacted.json
-
-# Uploaded or generated local files
+# Private, uploaded, cached, or generated data
 uploads/
+customer_data/
+local_data/
+data/raw/
+data/private/
+data/uploads/
+data/cache/
+evidence/
+exports/
+outputs/
+artifacts/
+reports/generated/
+screenshots/private/
 tmp/
+temp/
+*.tmp
+*.bak
 *.log
+*.zip
+
+# Local databases and session state
+*.db
+*.sqlite
+*.sqlite3
+*.session.json
 
 # Editors and operating systems
 .idea/
 .vscode/
+*.code-workspace
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Profiling and runtime artifacts
+.prof/
+*.prof
+*.pid
