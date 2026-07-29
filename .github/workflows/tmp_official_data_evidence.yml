@@ -33,6 +33,7 @@ jobs:
           tests/test_competition_case_study_view.py
           tests/test_official_data_hub.py
           tests/test_competition_readiness.py
+          tests/test_public_entrypoint_sections.py
       - name: Run full regression suite
         run: python -m pytest -q
       - name: Compile and import applications
@@ -89,6 +90,7 @@ jobs:
           $allowed = @(
             'README.md',
             'competition_app.py',
+            'streamlit_app.py',
             'src/competition_real_data_view.py',
             'src/competition_readiness.py',
             'tests/test_competition_readiness.py'
@@ -102,6 +104,6 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add README.md competition_app.py src/competition_real_data_view.py src/competition_readiness.py tests/test_competition_readiness.py
+          git add README.md competition_app.py streamlit_app.py src/competition_real_data_view.py src/competition_readiness.py tests/test_competition_readiness.py
           git commit -m 'Integrate pinned official data cases into competition demo'
           git push origin HEAD:feature/global-trade-copilot-v2
