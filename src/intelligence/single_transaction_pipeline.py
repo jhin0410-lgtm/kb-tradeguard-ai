@@ -300,6 +300,48 @@ def _clear_transaction_capacity_records(
     return updated, removed_ids
 
 
+def _clear_transaction_product_records(
+    case: UnifiedCopilotCase,
+    transaction_id: str,
+) -> tuple[UnifiedCopilotCase, list[str]]:
+    """Remove registry-derived product records unsupported by the current run."""
+
+    def belongs_to_transaction(record: Any) -> bool:
+        linked = list(getattr(record, "linked_transaction_ids", []) or [])
+        if transaction_id in linked:
+            return True
+        source_id = str(getattr(getattr(record, "source", None), "source_id", ""))
+        return not linked and source_id.startswith("TRADE-FINANCE-PRODUCTS-")
+
+    removed_ids = [
+        item.product_candidate_id
+        for item in case.trade_finance.product_candidates
+        if belongs_to_transaction(item)
+    ] + [
+        item.requirement_id
+        for item in case.trade_finance.consultation_requirements
+        if belongs_to_transaction(item)
+    ]
+    if not removed_ids:
+        return case, []
+    domain = case.trade_finance.model_copy(
+        update={
+            "product_candidates": [
+                item
+                for item in case.trade_finance.product_candidates
+                if not belongs_to_transaction(item)
+            ],
+            "consultation_requirements": [
+                item
+                for item in case.trade_finance.consultation_requirements
+                if not belongs_to_transaction(item)
+            ],
+        }
+    )
+    candidate = case.model_copy(update={"trade_finance": domain})
+    return UnifiedCopilotCase.model_validate(candidate.model_dump(mode="python")), sorted(removed_ids)
+
+
 def run_single_transaction_assessment(
     case: UnifiedCopilotCase,
     request: SingleTransactionAssessmentRequest,
@@ -475,14 +517,19 @@ def run_single_transaction_assessment(
             )
         )
     else:
+        working, removed_product_record_ids = _clear_transaction_product_records(
+            working,
+            request.transaction_id,
+        )
         traces.append(
             _trace(
                 4,
                 "product_matching",
                 "skipped",
                 before,
-                before,
+                working.case_hash,
                 reason="No explicit trade-finance need profiles were supplied.",
+                removed_record_ids=removed_product_record_ids,
             )
         )
 

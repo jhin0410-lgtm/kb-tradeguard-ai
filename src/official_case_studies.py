@@ -89,8 +89,18 @@ class PinnedOfficialSource(BaseModel):
     retrieved_at: datetime | None = None
     observation_date: date | None = None
     response_hash: str
+    provider_response_hash: str | None = None
     payload: dict[str, Any] | list[dict[str, Any]]
     limitations: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def stored_payload_matches_hash(self):
+        expected = _canonical_payload_hash(self.payload)
+        if self.response_hash != expected:
+            raise ValueError(
+                f"Pinned source {self.asset_key} payload does not match response_hash"
+            )
+        return self
 
 
 class PinnedOfficialContextCase(BaseModel):
@@ -247,9 +257,8 @@ def pin_official_context_case(
                 source_url=snapshot.source_url or nested_source_url,
                 retrieved_at=snapshot.retrieved_at or nested_retrieved_at,
                 observation_date=snapshot.observation_date,
-                response_hash=(
-                    snapshot.response_hash or _canonical_payload_hash(snapshot.payload)
-                ),
+                response_hash=_canonical_payload_hash(snapshot.payload),
+                provider_response_hash=snapshot.response_hash,
                 payload=snapshot.payload,
                 limitations=snapshot.limitations,
             )

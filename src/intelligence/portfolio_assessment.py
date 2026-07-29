@@ -110,11 +110,11 @@ class CurrencyExposure(BaseModel):
 
 class LiquidityBucket(BaseModel):
     period: str
-    expected_inflow_krw: Decimal
-    expected_outflow_krw: Decimal
+    expected_inflow_krw: Decimal | None
+    expected_outflow_krw: Decimal | None
     fixed_cost_krw: Decimal
-    net_cashflow_krw: Decimal
-    ending_cash_krw: Decimal
+    net_cashflow_krw: Decimal | None
+    ending_cash_krw: Decimal | None
     transaction_ids: list[str] = Field(default_factory=list)
     missing_currency_rates: list[str] = Field(default_factory=list)
 
@@ -371,16 +371,26 @@ def _build_liquidity(
         else:
             raw[period]["outflow"] += expected_krw
 
-    ending_cash = opening_cash
+    ending_cash: Decimal | None = opening_cash
     result: list[LiquidityBucket] = []
     for period, values in raw.items():
-        net = values["inflow"] - values["outflow"] - fixed_cost
-        ending_cash += net
+        has_unvalued_transaction = bool(values["missing_rates"])
+        inflow = None if has_unvalued_transaction else values["inflow"]
+        outflow = None if has_unvalued_transaction else values["outflow"]
+        net = (
+            None
+            if has_unvalued_transaction
+            else values["inflow"] - values["outflow"] - fixed_cost
+        )
+        if ending_cash is None or net is None:
+            ending_cash = None
+        else:
+            ending_cash += net
         result.append(
             LiquidityBucket(
                 period=period,
-                expected_inflow_krw=values["inflow"],
-                expected_outflow_krw=values["outflow"],
+                expected_inflow_krw=inflow,
+                expected_outflow_krw=outflow,
                 fixed_cost_krw=fixed_cost,
                 net_cashflow_krw=net,
                 ending_cash_krw=ending_cash,
