@@ -46,17 +46,19 @@ jobs:
       - name: Public repository safety
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          python scripts/public_repo_safety_check.py | Tee-Object -FilePath artifacts/public-repo-safety.json
+          $report = Join-Path $env:RUNNER_TEMP 'public-repo-safety.json'
+          python scripts/public_repo_safety_check.py | Tee-Object -FilePath $report
           exit $LASTEXITCODE
       - name: Competition readiness
         shell: pwsh
         run: |
-          python scripts/competition_readiness_check.py | Tee-Object -FilePath artifacts/competition-readiness.txt
+          $report = Join-Path $env:RUNNER_TEMP 'competition-readiness.txt'
+          python scripts/competition_readiness_check.py | Tee-Object -FilePath $report
           exit $LASTEXITCODE
       - name: Full pytest suite
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           python -m pytest -q 2>&1 | Tee-Object -FilePath artifacts/pytest-output.txt
           exit $LASTEXITCODE
       - name: Compile and import applications
@@ -163,6 +165,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: final-competition-release-evidence
-          path: artifacts/
+          path: |
+            artifacts/
+            ${{ runner.temp }}/public-repo-safety.json
+            ${{ runner.temp }}/competition-readiness.txt
           if-no-files-found: warn
           retention-days: 30
