@@ -11,7 +11,7 @@ permissions:
 jobs:
   integrate-and-audit:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +39,10 @@ jobs:
         run: |
           python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
           python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Install UI audit browser
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
       - name: Render desktop and mobile screenshots
         shell: pwsh
         run: |
@@ -52,7 +56,7 @@ jobs:
           ) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
           try {
             $ready = $false
-            for ($i = 0; $i -lt 40; $i++) {
+            for ($i = 0; $i -lt 45; $i++) {
               try {
                 $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8501/?presentation=true' -UseBasicParsing -TimeoutSec 3
                 if ($response.StatusCode -eq 200) { $ready = $true; break }
@@ -64,20 +68,9 @@ jobs:
               Get-Content $stderr -ErrorAction SilentlyContinue
               throw 'Streamlit did not become ready.'
             }
-            $candidates = @(
-              "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-              "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-              "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
-              "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-            )
-            $browser = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-            if (-not $browser) { throw 'Chrome or Edge was not found.' }
-            $desktop = Join-Path $PWD 'artifacts/competition-desktop.png'
-            $mobile = Join-Path $PWD 'artifacts/competition-mobile.png'
-            & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars --virtual-time-budget=12000 --window-size=1440,6000 "--screenshot=$desktop" 'http://127.0.0.1:8501/?presentation=true'
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $desktop)) { throw 'Desktop screenshot failed.' }
-            & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars --virtual-time-budget=12000 --window-size=430,6000 "--screenshot=$mobile" 'http://127.0.0.1:8501/?presentation=true'
-            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $mobile)) { throw 'Mobile screenshot failed.' }
+            python scripts/tmp_render_official_case_ui.py `
+              --url 'http://127.0.0.1:8501/?presentation=true' `
+              --output-dir artifacts
           } finally {
             if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
           }
