@@ -1,4 +1,4 @@
-name: temporary-official-data-evidence
+name: temporary-official-case-integration
 
 on:
   pull_request:
@@ -6,47 +6,109 @@ on:
       - feature/global-trade-copilot-v2
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  live-smoke:
+  integrate-and-audit:
     runs-on: windows-latest
-    timeout-minutes: 20
-    env:
-      KEXIM_API_KEY: ${{ secrets.KEXIM_API_KEY }}
-      KCS_TRADE_API_KEY: ${{ secrets.KCS_TRADE_API_KEY }}
-      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
-      BOK_ECOS_API_KEY: ${{ secrets.BOK_ECOS_API_KEY }}
-      OPENDART_API_KEY: ${{ secrets.OPENDART_API_KEY }}
-      NTS_BUSINESS_API_KEY: ${{ secrets.NTS_BUSINESS_API_KEY }}
-      TRADEGUARD_SMOKE_DART_CORP_CODE: ${{ secrets.TRADEGUARD_SMOKE_DART_CORP_CODE }}
-      TRADEGUARD_SMOKE_DART_BUSINESS_YEAR: ${{ secrets.TRADEGUARD_SMOKE_DART_BUSINESS_YEAR }}
-      TRADEGUARD_SMOKE_BUSINESS_NUMBER: ${{ secrets.TRADEGUARD_SMOKE_BUSINESS_NUMBER }}
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/global-trade-copilot-v2
-          persist-credentials: false
+          persist-credentials: true
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
+      - name: Apply official case integration
+        run: python scripts/tmp_integrate_official_cases.py
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.txt
-      - name: Run focused offline contracts
-        run: python -m pytest -q tests/test_official_case_studies.py tests/test_official_data_hub.py
-      - name: Collect live official evidence
+      - name: Run focused contracts
+        run: >-
+          python -m pytest -q
+          tests/test_official_case_studies.py
+          tests/test_competition_case_study_view.py
+          tests/test_official_data_hub.py
+          tests/test_competition_readiness.py
+      - name: Run full regression suite
+        run: python -m pytest -q
+      - name: Compile and import applications
+        run: |
+          python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
+          python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Render desktop and mobile screenshots
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          python scripts/official_data_smoke_test.py `
-            --output-report artifacts/official-data-live-smoke.json `
-            --output-snapshots artifacts/official-context-snapshots.json
-      - name: Upload sanitized evidence
+          $stdout = Join-Path $PWD 'artifacts/streamlit.stdout.log'
+          $stderr = Join-Path $PWD 'artifacts/streamlit.stderr.log'
+          $server = Start-Process python -ArgumentList @(
+            '-m','streamlit','run','streamlit_app.py',
+            '--server.headless=true','--server.address=127.0.0.1','--server.port=8501',
+            '--browser.gatherUsageStats=false'
+          ) -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 40; $i++) {
+              try {
+                $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8501/?presentation=true' -UseBasicParsing -TimeoutSec 3
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              Get-Content $stdout -ErrorAction SilentlyContinue
+              Get-Content $stderr -ErrorAction SilentlyContinue
+              throw 'Streamlit did not become ready.'
+            }
+            $candidates = @(
+              "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+              "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+              "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+              "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
+            )
+            $browser = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $browser) { throw 'Chrome or Edge was not found.' }
+            $desktop = Join-Path $PWD 'artifacts/competition-desktop.png'
+            $mobile = Join-Path $PWD 'artifacts/competition-mobile.png'
+            & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars --virtual-time-budget=12000 --window-size=1440,6000 "--screenshot=$desktop" 'http://127.0.0.1:8501/?presentation=true'
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $desktop)) { throw 'Desktop screenshot failed.' }
+            & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars --virtual-time-budget=12000 --window-size=430,6000 "--screenshot=$mobile" 'http://127.0.0.1:8501/?presentation=true'
+            if ($LASTEXITCODE -ne 0 -or -not (Test-Path $mobile)) { throw 'Mobile screenshot failed.' }
+          } finally {
+            if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force }
+          }
+      - name: Upload rendered UI audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: official-data-live-evidence
+          name: official-case-ui-audit
           path: artifacts/
           if-no-files-found: warn
           retention-days: 7
+      - name: Validate intended diff
+        shell: pwsh
+        run: |
+          $changed = git diff --name-only
+          $allowed = @(
+            'README.md',
+            'competition_app.py',
+            'src/competition_real_data_view.py',
+            'src/competition_readiness.py',
+            'tests/test_competition_readiness.py'
+          )
+          foreach ($path in $changed) {
+            if ($allowed -notcontains $path) { throw "Unexpected changed path: $path" }
+          }
+          if (-not $changed) { throw 'No integration changes were produced.' }
+      - name: Commit verified official case integration
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md competition_app.py src/competition_real_data_view.py src/competition_readiness.py tests/test_competition_readiness.py
+          git commit -m 'Integrate pinned official data cases into competition demo'
+          git push origin HEAD:feature/global-trade-copilot-v2
