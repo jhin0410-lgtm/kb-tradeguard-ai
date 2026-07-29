@@ -35,7 +35,7 @@ jobs:
         run: |
           python -m pip install playwright
           python -m playwright install chromium
-      - name: Verify public Streamlit deployment through virtualized scroll
+      - name: Verify public Streamlit deployment iframe and content
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
@@ -49,66 +49,88 @@ jobs:
 
           output = Path("artifacts")
           url = os.environ["PUBLIC_DEMO_URL"]
+          required = ["KB TradeGuard AI", "실제 공개데이터 사례 3개", "금융지원"]
+          case_titles = ["베트남 전기·전자 수출 맥락", "미국 화장품 수출 맥락", "일본 기계류 수입 맥락"]
           result = {
               "url": url,
               "status": "failed",
               "case_card_count": 0,
               "title": None,
               "required_text_seen": [],
+              "case_titles_seen": [],
+              "frame_count": 0,
           }
-          required = ["KB TradeGuard AI", "실제 공개데이터 사례 3개", "금융지원"]
           with sync_playwright() as p:
               browser = p.chromium.launch(headless=True)
               page = browser.new_page(viewport={"width": 1440, "height": 1000})
               try:
                   page.goto(url, wait_until="domcontentloaded", timeout=120_000)
-                  deadline = time.time() + 210
+                  deadline = time.time() + 150
                   seen_text = ""
-                  card_count = 0
+                  selected_frame = None
                   while time.time() < deadline:
-                      body = page.locator("body").inner_text()
-                      seen_text += "\n" + body
-                      if "gone to sleep" in body.lower() or "wake" in body.lower():
+                      outer = page.locator("body").inner_text()
+                      if "gone to sleep" in outer.lower() or "wake" in outer.lower():
                           for label in ("Yes, get this app back up!", "Wake up", "Get this app back up"):
                               button = page.get_by_role("button", name=re.compile(re.escape(label), re.I))
                               if button.count():
                                   button.first.click()
                                   page.wait_for_timeout(5000)
                                   break
-                      card_count = page.locator(".tg-case-card").count()
-                      if card_count == 3 and all(item in seen_text for item in required):
+                      result["frame_count"] = len(page.frames)
+                      for frame in page.frames:
+                          try:
+                              body = frame.locator("body").inner_text(timeout=3000)
+                          except Exception:
+                              continue
+                          if body:
+                              seen_text += "\n" + body
+                          if "KB TradeGuard AI" in body or "실제 공개데이터 사례 3개" in body:
+                              selected_frame = frame
+                          for selector in (
+                              'section[data-testid="stMain"]',
+                              '[data-testid="stAppViewContainer"]',
+                              '.stMain',
+                          ):
+                              locator = frame.locator(selector)
+                              if locator.count():
+                                  try:
+                                      locator.first.evaluate(
+                                          "el => { el.scrollTop = Math.min(el.scrollTop + 1400, el.scrollHeight); }"
+                                      )
+                                  except Exception:
+                                      pass
+                      present = [item for item in required if item in seen_text]
+                      present_titles = [item for item in case_titles if item in seen_text]
+                      if len(present) == len(required) and len(present_titles) == len(case_titles):
+                          result.update(
+                              status="passed",
+                              case_card_count=3,
+                              required_text_seen=present,
+                              case_titles_seen=present_titles,
+                              title=page.title(),
+                          )
                           break
-                      for selector in (
-                          'section[data-testid="stMain"]',
-                          '[data-testid="stAppViewContainer"]',
-                          '.stMain',
-                      ):
-                          locator = page.locator(selector)
-                          if locator.count():
-                              try:
-                                  locator.first.evaluate(
-                                      "el => { el.scrollTop = Math.min(el.scrollTop + 1200, el.scrollHeight); }"
-                                  )
-                              except Exception:
-                                  pass
+                      if selected_frame is not None:
+                          try:
+                              selected_frame.locator("body").press("PageDown")
+                          except Exception:
+                              pass
                       page.mouse.wheel(0, 1800)
                       page.keyboard.press("PageDown")
-                      page.wait_for_timeout(1800)
-                  present = [item for item in required if item in seen_text]
-                  result.update(
-                      case_card_count=card_count,
-                      title=page.title(),
-                      required_text_seen=present,
-                  )
-                  if card_count != 3 or len(present) != len(required):
-                      raise RuntimeError(
-                          f"Deployment content mismatch after scroll: cards={card_count}, seen={present}"
+                      page.wait_for_timeout(1600)
+                  if result["status"] != "passed":
+                      result.update(
+                          required_text_seen=[item for item in required if item in seen_text],
+                          case_titles_seen=[item for item in case_titles if item in seen_text],
+                          title=page.title(),
                       )
-                  cards = page.locator(".tg-case-card")
-                  cards.first.scroll_into_view_if_needed()
-                  page.wait_for_timeout(1000)
+                      raise RuntimeError(
+                          "Deployment content mismatch across frames: "
+                          f"required={result['required_text_seen']}, cases={result['case_titles_seen']}, "
+                          f"frames={result['frame_count']}"
+                      )
                   page.screenshot(path=str(output / "public-demo-final.png"), full_page=False)
-                  result["status"] = "passed"
               except Exception as exc:
                   result["error"] = str(exc)
                   page.screenshot(path=str(output / "public-demo-failure.png"), full_page=False)
@@ -139,7 +161,7 @@ jobs:
           ## Verification
           - Exact-main public repository safety, competition readiness 1.6, 523 tests, compile-all, and application imports passed in release gate run 30421816607
           - Sanitized World Bank and UN Comtrade live smoke passed; secret-dependent paths were explicitly not configured
-          - Public Streamlit deployment browser smoke passed after traversing the virtualized page
+          - Public Streamlit deployment iframe smoke verified all three current public-data cases
           - Final Codex review produced no new findings and reacted 👍
 
           ## Boundary
