@@ -1,1 +1,1 @@
-rerun virtualized Streamlit deployment and release gate
+rerun iframe-aware Streamlit deployment and release gate
