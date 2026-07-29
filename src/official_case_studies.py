@@ -8,6 +8,7 @@ represented by these case studies.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import date, datetime
 from pathlib import Path
@@ -168,6 +169,51 @@ def build_official_context_query(
     )
 
 
+def _canonical_payload_hash(payload: dict[str, Any] | list[dict[str, Any]]) -> str:
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _nested_metadata(
+    payload: dict[str, Any] | list[dict[str, Any]],
+) -> tuple[str | None, datetime | None]:
+    rows: list[Any]
+    if isinstance(payload, dict):
+        raw_rows = payload.get("results")
+        rows = raw_rows if isinstance(raw_rows, list) else []
+    else:
+        rows = payload
+
+    source_url: str | None = None
+    retrieved_values: list[datetime] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if source_url is None:
+            candidate = (
+                row.get("source_url")
+                or row.get("official_source_url")
+                or row.get("official_api_url")
+            )
+            if candidate:
+                source_url = str(candidate)
+        raw_retrieved = row.get("retrieved_at")
+        if not raw_retrieved:
+            continue
+        try:
+            parsed = datetime.fromisoformat(str(raw_retrieved).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        retrieved_values.append(parsed)
+    return source_url, max(retrieved_values) if retrieved_values else None
+
+
 def pin_official_context_case(
     definition: OfficialContextCaseDefinition,
     bundle: OfficialDataBundle,
@@ -190,17 +236,20 @@ def pin_official_context_case(
     sources = []
     for asset_key in sorted(required_keys):
         snapshot = snapshots[asset_key]
-        if snapshot.response_hash is None or snapshot.payload is None:
-            raise ValueError(f"{asset_key} must preserve payload and response_hash")
+        if snapshot.payload is None:
+            raise ValueError(f"{asset_key} must preserve its public response payload")
+        nested_source_url, nested_retrieved_at = _nested_metadata(snapshot.payload)
         sources.append(
             PinnedOfficialSource(
                 asset_key=asset_key,
                 provider=snapshot.provider,
                 operation=snapshot.operation,
-                source_url=snapshot.source_url,
-                retrieved_at=snapshot.retrieved_at,
+                source_url=snapshot.source_url or nested_source_url,
+                retrieved_at=snapshot.retrieved_at or nested_retrieved_at,
                 observation_date=snapshot.observation_date,
-                response_hash=snapshot.response_hash,
+                response_hash=(
+                    snapshot.response_hash or _canonical_payload_hash(snapshot.payload)
+                ),
                 payload=snapshot.payload,
                 limitations=snapshot.limitations,
             )
