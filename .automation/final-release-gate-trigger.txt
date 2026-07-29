@@ -1,1 +1,1 @@
-rerun fully isolated final competition release gate
+rerun virtualized Streamlit deployment and release gate
