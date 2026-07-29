@@ -230,8 +230,8 @@ def _render_hero() -> None:
 
 def _render_scenario_control(active_id: str) -> str:
     scenarios = list_demo_scenarios()
-    by_label = {item.label: item.scenario_id for item in scenarios}
-    active_label = next(item.label for item in scenarios if item.scenario_id == active_id)
+    by_label = {item.title: item.scenario_id for item in scenarios}
+    active_label = next(item.title for item in scenarios if item.scenario_id == active_id)
     with st.container(border=True):
         st.markdown("**합성 시나리오 변경**")
         selected_label = st.selectbox(

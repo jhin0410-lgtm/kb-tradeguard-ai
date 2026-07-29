@@ -533,6 +533,15 @@ def _normalized_fx_payload(snapshot: OfficialDataSnapshot) -> list[dict[str, Any
     return normalized
 
 
+def _payload_has_results(payload: dict[str, Any] | list[dict[str, Any]] | None) -> bool:
+    if payload is None:
+        return False
+    if isinstance(payload, list):
+        return bool(payload)
+    results = payload.get("results")
+    return results not in (None, [], {})
+
+
 def _bundle_hash(bundle: OfficialDataBundle) -> str:
     payload = {
         "query": bundle.query.model_dump(mode="json"),
@@ -574,19 +583,19 @@ def attach_official_data_bundle(
 
     updates: dict[str, Any] = {"official_data_assets": assets}
     fx_snapshot = next(
-        (
-            item
-            for item in bundle.snapshots
-            if item.asset_key == "kexim_fx_reference"
-            and item.status in {"available", "partial"}
-        ),
+        (item for item in bundle.snapshots if item.asset_key == "kexim_fx_reference"),
         None,
     )
-    if fx_snapshot is not None:
-        fx_payload = _normalized_fx_payload(fx_snapshot)
+    fx_payload = (
+        _normalized_fx_payload(fx_snapshot)
+        if fx_snapshot is not None
+        and fx_snapshot.status in {"available", "partial"}
+        else []
+    )
+    if fx_snapshot is not None and fx_payload:
         updates["official_fx_reference"] = CaseDataAsset(
             asset_name="KEXIM reviewed public reference FX",
-            status="available" if fx_payload else "partial",
+            status="available" if fx_snapshot.status == "available" else "partial",
             source=fx_snapshot.provider,
             as_of_date=fx_snapshot.observation_date or bundle.query.as_of_date,
             retrieved_at=fx_snapshot.retrieved_at,
@@ -596,6 +605,23 @@ def attach_official_data_bundle(
                 *fx_snapshot.limitations,
                 "Public reference rates only; not an executable KB spot or forward quote.",
             ],
+        )
+    else:
+        failure_limitations = list(fx_snapshot.limitations) if fx_snapshot is not None else []
+        if fx_snapshot is not None and fx_snapshot.error:
+            failure_limitations.append(fx_snapshot.error)
+        failure_limitations.append(
+            "The prior derived FX reference was cleared because the latest refresh produced no usable reviewed rates."
+        )
+        updates["official_fx_reference"] = CaseDataAsset(
+            asset_name="KEXIM reviewed public reference FX",
+            status="missing",
+            source=fx_snapshot.provider if fx_snapshot is not None else "OfficialDataHub",
+            as_of_date=bundle.query.as_of_date,
+            retrieved_at=fx_snapshot.retrieved_at if fx_snapshot is not None else None,
+            source_hash=fx_snapshot.response_hash if fx_snapshot is not None else None,
+            payload=None,
+            limitations=failure_limitations,
         )
 
     financial_keys = {
@@ -609,14 +635,22 @@ def attach_official_data_bundle(
         if item.asset_key in financial_keys
         and item.status in {"available", "partial"}
     ]
-    if financial_snapshots:
+    statement_snapshot = next(
+        (
+            item
+            for item in bundle.snapshots
+            if item.asset_key == "opendart_financial_statements"
+        ),
+        None,
+    )
+    if (
+        statement_snapshot is not None
+        and statement_snapshot.status in {"available", "partial"}
+        and _payload_has_results(statement_snapshot.payload)
+    ):
         updates["financial_context"] = CaseDataAsset(
             asset_name="Reviewed official company and financial context",
-            status=(
-                "available"
-                if all(item.status == "available" for item in financial_snapshots)
-                else "partial"
-            ),
+            status="available" if statement_snapshot.status == "available" else "partial",
             source="OfficialDataHub",
             as_of_date=bundle.query.as_of_date,
             source_hash=_bundle_hash(bundle),
@@ -631,6 +665,19 @@ def attach_official_data_bundle(
             ],
             limitations=[
                 "Business status and issuer filings are context only; they are not a bank credit decision.",
+                bundle.authority_boundary,
+            ],
+        )
+    else:
+        updates["financial_context"] = CaseDataAsset(
+            asset_name="Reviewed official company and financial context",
+            status="missing",
+            source="OfficialDataHub",
+            as_of_date=bundle.query.as_of_date,
+            source_hash=_bundle_hash(bundle),
+            payload=None,
+            limitations=[
+                "A usable reviewed financial-statement snapshot is required before financial capability is enabled.",
                 bundle.authority_boundary,
             ],
         )

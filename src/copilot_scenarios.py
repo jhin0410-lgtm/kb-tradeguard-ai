@@ -159,12 +159,20 @@ def _usable_fx_currencies(case: UnifiedCopilotCase) -> set[str]:
         return set()
     payload = asset.payload
     if isinstance(payload, dict):
-        if all(isinstance(value, (int, float)) for value in payload.values()):
-            return {
-                str(currency).upper()
-                for currency, value in payload.items()
-                if float(value) > 0
-            }
+        mapping_like = bool(payload) and all(
+            len(str(currency)) == 3 and str(currency).isalpha()
+            for currency in payload
+        )
+        if mapping_like:
+            currencies: set[str] = set()
+            for currency, value in payload.items():
+                try:
+                    usable = value is not None and float(value) > 0
+                except (TypeError, ValueError):
+                    usable = False
+                if usable:
+                    currencies.add(str(currency).upper())
+            return currencies
         payload = [payload]
     currencies: set[str] = set()
     for row in payload:
@@ -230,6 +238,14 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         fx_missing.append("approved transactions")
     if not case.capabilities.official_fx_reference:
         fx_missing.append("official or disclosed FX reference")
+    else:
+        uncovered_fx_currencies = sorted(
+            set(currencies) - _usable_fx_currencies(case)
+        )
+        if uncovered_fx_currencies:
+            fx_missing.append(
+                "FX reference for currencies: " + ", ".join(uncovered_fx_currencies)
+            )
     fx_payload = {
         "type": "fx_shock",
         "currencies": currencies,
