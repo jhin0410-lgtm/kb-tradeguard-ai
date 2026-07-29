@@ -1,1 +1,1 @@
-rerun iframe-aware Streamlit deployment and release gate
+trigger final verified competition release creation
