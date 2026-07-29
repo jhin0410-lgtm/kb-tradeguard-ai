@@ -20,9 +20,8 @@ from src.demo_scenarios import DemoScenarioMetadata
 
 PUBLIC_DEMO_URL = "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
 
-# The public URL is not a secret. An explicit deployment environment value can still
-# override it if the app is moved or renamed later.
-os.environ.setdefault("TRADEGUARD_PUBLIC_DEMO_URL", PUBLIC_DEMO_URL)
+# The public URL is not a secret. Deployment configuration is applied in main so a
+# Streamlit secret can override this fallback on forks or renamed applications.
 
 # competition_app originally called the display field ``label`` while the governed
 # metadata contract names it ``title``. Keep the deployment entrypoint backward
@@ -168,8 +167,14 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    for key in ("KEXIM_API_KEY", "KCS_TRADE_API_KEY", "DATA_GO_KR_SERVICE_KEY"):
+    for key in (
+        "KEXIM_API_KEY",
+        "KCS_TRADE_API_KEY",
+        "DATA_GO_KR_SERVICE_KEY",
+        "TRADEGUARD_PUBLIC_DEMO_URL",
+    ):
         _secret_to_environment(key)
+    os.environ.setdefault("TRADEGUARD_PUBLIC_DEMO_URL", PUBLIC_DEMO_URL)
     page = st.Page(
         _render_competition_page,
         title="KB TradeGuard AI",

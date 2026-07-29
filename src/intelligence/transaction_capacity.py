@@ -181,6 +181,9 @@ def _find_transaction(case: UnifiedCopilotCase, transaction_id: str) -> dict[str
         raise ValueError(
             "Approved transaction is missing capacity inputs: " + ", ".join(missing)
         )
+    amount = _decimal(transaction["amount_fc"], "transaction amount_fc")
+    if amount <= 0:
+        raise ValueError("transaction amount_fc must be greater than zero")
     return transaction
 
 
@@ -199,10 +202,12 @@ def _find_statement(
     statement = matches[0]
     if statement.currency != "KRW":
         raise ValueError("Transaction-capacity assessment currently requires KRW statements")
-    if (
-        case.trade_finance.company_profile is not None
-        and statement.company_id != case.trade_finance.company_profile.company_id
-    ):
+    company_profile = case.trade_finance.company_profile
+    if company_profile is None:
+        raise ValueError(
+            "A reviewed company profile is required to bind the financial statement to the case"
+        )
+    if statement.company_id != company_profile.company_id:
         raise ValueError("Financial statement company does not match the case company profile")
     return statement
 
@@ -242,8 +247,14 @@ def _official_fx_rate(case: UnifiedCopilotCase, currency: str) -> Decimal:
     if currency == "KRW":
         return Decimal("1")
     asset = case.official_fx_reference
-    if asset is None or asset.payload is None:
-        raise ValueError(f"FX reference is required for transaction currency {currency}")
+    if (
+        asset is None
+        or asset.status not in {"available", "partial"}
+        or asset.payload is None
+    ):
+        raise ValueError(
+            f"A current available or partial FX reference is required for transaction currency {currency}"
+        )
     payload: Any = asset.payload
     if isinstance(payload, dict):
         if currency in {str(key).upper() for key in payload}:
@@ -294,8 +305,8 @@ def _metric(
     )
 
 
-def _json_value(value: Decimal | None) -> float | None:
-    return float(value) if value is not None else None
+def _json_value(value: Decimal | None) -> str | None:
+    return format(value, "f") if value is not None else None
 
 
 def analyze_transaction_capacity(
@@ -311,11 +322,15 @@ def analyze_transaction_capacity(
     payment = _find_payment_structure(case, request)
     currency = str(transaction["currency"]).upper()
     amount_fc = _decimal(transaction["amount_fc"], "transaction amount_fc")
+    if amount_fc <= 0:
+        raise ValueError("transaction amount_fc must be greater than zero")
     fx_rate = (
         Decimal(str(request.fx_rate_krw))
         if request.fx_rate_krw is not None
         else _official_fx_rate(case, currency)
     )
+    if fx_rate <= 0:
+        raise ValueError("FX rate must be greater than zero")
     gross_transaction_krw = amount_fc * fx_rate
 
     cash = _scaled(statement, "cash_and_cash_equivalents")
@@ -493,12 +508,13 @@ def analyze_transaction_capacity(
             "assessment_id": request.assessment_id,
             "transaction_id": request.transaction_id,
             "statement_id": request.statement_id,
+            "statement_snapshot": statement.model_dump(mode="json"),
             "payment_structure_id": (
                 payment.payment_structure_id if payment is not None else None
             ),
             "transaction_currency": currency,
-            "amount_fc": float(amount_fc),
-            "fx_rate_krw": float(fx_rate),
+            "amount_fc": _json_value(amount_fc),
+            "fx_rate_krw": _json_value(fx_rate),
             "fx_rate_source": (
                 request.fx_rate_source
                 if request.fx_rate_krw is not None
@@ -508,15 +524,9 @@ def analyze_transaction_capacity(
                     else case.official_fx_reference.source
                 )
             ),
-            "protection_percent": (
-                float(request.protection_percent)
-                if request.protection_percent is not None
-                else None
-            ),
-            "pre_shipment_funding_need_krw": (
-                float(request.pre_shipment_funding_need_krw)
-                if request.pre_shipment_funding_need_krw is not None
-                else None
+            "protection_percent": _json_value(request.protection_percent),
+            "pre_shipment_funding_need_krw": _json_value(
+                request.pre_shipment_funding_need_krw
             ),
             "analysis_basis": "gross transaction scale and explicit residual exposure",
         },

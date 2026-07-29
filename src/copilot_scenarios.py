@@ -230,6 +230,14 @@ def propose_scenarios(case: UnifiedCopilotCase) -> ScenarioProposalSet:
         fx_missing.append("approved transactions")
     if not case.capabilities.official_fx_reference:
         fx_missing.append("official or disclosed FX reference")
+    else:
+        uncovered_fx_currencies = sorted(
+            set(currencies) - _usable_fx_currencies(case)
+        )
+        if uncovered_fx_currencies:
+            fx_missing.append(
+                "FX reference for currencies: " + ", ".join(uncovered_fx_currencies)
+            )
     fx_payload = {
         "type": "fx_shock",
         "currencies": currencies,
