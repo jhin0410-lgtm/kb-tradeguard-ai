@@ -271,3 +271,8 @@ Pattern scan이 통과해도 과거 Git history, fork, cache, Actions log 또는
 ## Portfolio and official-data v2
 
 The competition prototype now includes a deterministic single-company, multi-transaction portfolio layer, a reviewed 21-item trade-finance product registry, and a unified read-only hub for seven official-data adapters. The public workflow follows company → transactions → official data → risk/scenario → financial support → action plan. Multi-company switching remains an isolated synthetic demonstration surface rather than a production multi-tenant boundary.
+
+
+## Real public-data evidence pack
+
+Three competition case studies combine synthetic transaction questions with pinned World Bank and UN Comtrade public observations collected on 2026-07-29. Each source preserves its retrieval timestamp, observation year, payload, and SHA-256 response hash. The manual `official-data-live-smoke` workflow can refresh sanitized evidence without printing credentials. See `docs/official_data_case_studies.md`.

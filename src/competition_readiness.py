@@ -15,6 +15,7 @@ from .assessment_app_presentation import build_presentation_snapshot, scenario_n
 from .assessment_app_v2 import build_presentation_snapshot_v2
 from .competition_demo import build_competition_validation_status
 from .demo_scenarios import list_demo_scenarios, load_demo_scenario
+from .official_case_studies import load_pinned_official_context_dataset
 from .portfolio_demo import build_demo_company_workspace
 from .intelligence.portfolio_assessment import analyze_trade_portfolio, match_portfolio_products
 from .intelligence.product_matching import load_product_registry
@@ -53,14 +54,21 @@ _REQUIRED_FILES = [
     "docs/trade_document_gold_dataset.md",
     "docs/ui_v2_mobile.md",
     "docs/un_comtrade_preview.md",
+    "docs/official_data_case_studies.md",
+    ".github/workflows/official-data-smoke.yml",
     "examples/document_extraction_evaluation_example.json",
     "data/gold/trade_document_gold_v1.json",
     "data/reference/trade_document_rules_v1.json",
     "data/reference/trade_finance_product_registry_v2.json",
+    "data/case_studies/official_context_queries_v1.json",
+    "data/case_studies/official_context_snapshots_v1.json",
     "scripts/evaluate_document_extraction.py",
     "scripts/public_repo_safety_check.py",
     "scripts/trade_document_gold_summary.py",
     "scripts/live_ai_provider_smoke_test.py",
+    "scripts/official_data_smoke_test.py",
+    "src/official_case_studies.py",
+    "src/competition_case_study_view.py",
     "src/data_providers/kexim_fx.py",
     "src/data_providers/korea_customs_trade.py",
     "src/data_providers/un_comtrade.py",
@@ -153,6 +161,19 @@ def build_competition_readiness_report() -> dict[str, Any]:
         if not exists:
             failures.append(f"Official-data adapter is missing: {surface_id}")
 
+    pinned_context = load_pinned_official_context_dataset()
+    pinned_source_count = sum(len(case.sources) for case in pinned_context.cases)
+    if len(pinned_context.cases) != 3:
+        failures.append("Pinned official-context dataset must contain three cases")
+    if pinned_source_count != 6:
+        failures.append("Pinned official-context cases must preserve six source bundles")
+    if any(
+        len(source.response_hash) != 64
+        for case in pinned_context.cases
+        for source in case.sources
+    ):
+        failures.append("Pinned official-context sources require SHA-256 hashes")
+
     product_registry = load_product_registry()
     if len(product_registry.products) < 20:
         failures.append("Trade-finance product registry does not cover the governed minimum")
@@ -235,12 +256,12 @@ def build_competition_readiness_report() -> dict[str, Any]:
         )
 
     return {
-        "report_version": "competition-readiness/1.5",
+        "report_version": "competition-readiness/1.6",
         "status": "ready" if not failures else "not_ready",
         "network_calls": "none",
         "public_demo_entrypoint": "streamlit_app.py",
         "public_demo_data_mode": (
-            "synthetic_transaction_and_portfolio_with_read_only_official_context"
+            "synthetic_transactions_with_pinned_and_optional_live_official_context"
         ),
         "required_file_count": len(_REQUIRED_FILES),
         "missing_files": missing_files,
@@ -254,6 +275,11 @@ def build_competition_readiness_report() -> dict[str, Any]:
             item["requires_deployment_secret"] for item in official_data_surfaces
         ),
         "official_data_network_verified": False,
+        "pinned_official_context_live_collected": True,
+        "pinned_official_context_dataset_version": pinned_context.dataset_version,
+        "pinned_official_context_case_count": len(pinned_context.cases),
+        "pinned_official_context_source_count": pinned_source_count,
+        "pinned_official_context_generated_at": pinned_context.generated_at.isoformat(),
         "product_registry_version": product_registry.registry_version,
         "product_registry_product_count": len(product_registry.products),
         "portfolio_company_count": len(portfolio_results),

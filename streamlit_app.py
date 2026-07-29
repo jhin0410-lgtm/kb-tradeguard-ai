@@ -9,6 +9,8 @@ import streamlit as st
 
 import competition_app as app
 from src.competition_ai_boundary_view import render_ai_boundary_section
+from src.competition_case_study_view import render_official_case_study_section
+from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
@@ -74,7 +76,7 @@ def _render_internal_benchmark() -> None:
 def _render_audit(run, scenario_id: str) -> None:
     st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">07 · 검증 현황과 감사 기록</div>',
+        '<div class="tg-section-title">08 · 검증 현황과 감사 기록</div>',
         unsafe_allow_html=True,
     )
     app._render_validation_status()
@@ -133,6 +135,7 @@ def _render_competition_page() -> None:
     )
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     app._render_hero()
+    render_workflow_map()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
@@ -145,8 +148,10 @@ def _render_competition_page() -> None:
     app._render_verdict(run)
     app._render_risks(run, presentation_mode=presentation_mode)
     app._render_actions(run, presentation_mode=presentation_mode)
+    render_portfolio_section(presentation_mode=presentation_mode)
     render_ai_boundary_section(presentation_mode=presentation_mode)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
+    render_official_case_study_section(presentation_mode=presentation_mode)
     render_official_data_section(presentation_mode=presentation_mode)
     if not presentation_mode:
         _render_audit(run, scenario_id)

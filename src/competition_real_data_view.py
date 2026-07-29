@@ -281,7 +281,7 @@ def render_official_data_section(*, presentation_mode: bool) -> None:
     st.markdown(REAL_DATA_CSS, unsafe_allow_html=True)
     st.markdown('<div id="data" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">06 · 실제 공식 데이터 연결</div>',
+        '<div class="tg-section-title">07 · 선택형 live 공식 데이터 조회</div>',
         unsafe_allow_html=True,
     )
     st.markdown(

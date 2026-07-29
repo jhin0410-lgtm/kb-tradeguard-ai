@@ -1,8 +1,8 @@
 """Single-screen public competition demo for KB TradeGuard AI.
 
-The app is intentionally synthetic-demo-only: it auto-runs a governed showcase case,
-hides development pages and upload controls, presents a Korean risk-first workflow,
-and exposes only read-only evidence, action, validation, snapshot, and QR surfaces.
+The app uses synthetic transaction and company fixtures while presenting separately
+labelled pinned public-data context. It hides development pages and upload controls,
+presents a Korean risk-first workflow, and exposes read-only evidence and audit surfaces.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from src.assessment_app_v2 import (
     build_risk_first_summary,
     render_presentation_snapshot_html,
 )
+from src.competition_case_study_view import render_official_case_study_section
 from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
@@ -377,7 +378,7 @@ def _render_qr() -> None:
 
 def _render_audit(run, scenario_id: str) -> None:
     st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">07 · 검증 현황과 감사 Snapshot</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">08 · 검증 현황과 감사 Snapshot</div>', unsafe_allow_html=True)
     _render_validation_status()
     st.divider()
     snapshot = build_presentation_snapshot_v2(run, scenario_id=scenario_id)
@@ -452,6 +453,7 @@ def main() -> None:
     _render_actions(run, presentation_mode=presentation_mode)
     render_portfolio_section(presentation_mode=presentation_mode)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
+    render_official_case_study_section(presentation_mode=presentation_mode)
     render_official_data_section(presentation_mode=presentation_mode)
     if not presentation_mode:
         _render_audit(run, scenario_id)
