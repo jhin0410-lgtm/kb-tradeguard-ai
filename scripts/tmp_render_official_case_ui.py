@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -19,6 +20,7 @@ def main() -> int:
     args = parse_args()
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    audit_rows = []
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -34,7 +36,8 @@ def main() -> int:
                 page.goto(args.url, wait_until="domcontentloaded", timeout=60_000)
                 page.wait_for_selector(".tg-case-card", state="visible", timeout=60_000)
                 page.wait_for_timeout(3_000)
-                card_count = page.locator(".tg-case-card").count()
+                cards = page.locator(".tg-case-card")
+                card_count = cards.count()
                 if card_count != 3:
                     raise RuntimeError(
                         f"Expected three official case cards in {name} view, found {card_count}"
@@ -51,17 +54,58 @@ def main() -> int:
                     raise RuntimeError(
                         f"Missing official case labels in {name} view: {missing}"
                     )
-                page.screenshot(
-                    path=str(output_dir / f"competition-{name}.png"),
-                    full_page=True,
+
+                card_geometry = cards.evaluate_all(
+                    """elements => elements.map((element) => ({
+                        clientWidth: element.clientWidth,
+                        scrollWidth: element.scrollWidth,
+                        clientHeight: element.clientHeight,
+                        scrollHeight: element.scrollHeight,
+                        left: element.getBoundingClientRect().left,
+                        right: element.getBoundingClientRect().right
+                    }))"""
                 )
+                overflowing = [
+                    index
+                    for index, item in enumerate(card_geometry, start=1)
+                    if item["scrollWidth"] > item["clientWidth"] + 1
+                ]
+                if overflowing:
+                    raise RuntimeError(
+                        f"Horizontal overflow in {name} official case cards: {overflowing}"
+                    )
+                if any(item["left"] < -1 or item["right"] > width + 1 for item in card_geometry):
+                    raise RuntimeError(
+                        f"Official case card extends outside the {name} viewport"
+                    )
+
+                page.screenshot(path=str(output_dir / f"competition-{name}-top.png"))
+                cards.first.scroll_into_view_if_needed()
+                page.wait_for_timeout(1_000)
+                page.screenshot(path=str(output_dir / f"competition-{name}-cases.png"))
                 (output_dir / f"competition-{name}.txt").write_text(
                     body_text,
                     encoding="utf-8",
                 )
+                audit_rows.append(
+                    {
+                        "viewport": name,
+                        "width": width,
+                        "height": height,
+                        "card_count": card_count,
+                        "card_geometry": card_geometry,
+                        "required_labels_present": True,
+                        "horizontal_overflow": False,
+                    }
+                )
                 page.close()
         finally:
             browser.close()
+
+    (output_dir / "ui-audit.json").write_text(
+        json.dumps(audit_rows, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return 0
 
 
