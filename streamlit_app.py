@@ -218,7 +218,7 @@ def _render_internal_benchmark() -> None:
 
 def _render_presentation_evidence(run: Any) -> None:
     st.markdown('<div id="final-audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">04 · 근거·검증</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">05 · 근거·검증</div>', unsafe_allow_html=True)
     app._render_validation_status()
     st.caption(
         f"입력 Package hash {run.input_package_hash[:16]}… · 출력 Case hash {run.output_case_hash[:16]}… · Hash는 변경 추적 식별자입니다."
@@ -227,7 +227,7 @@ def _render_presentation_evidence(run: Any) -> None:
 
 def _render_audit(run: Any, package: Any, source_key: str) -> None:
     st.markdown('<div id="final-audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">07 · 근거·검증·감사</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">06 · 근거·검증·감사</div>', unsafe_allow_html=True)
     app._render_validation_status()
     _render_internal_benchmark()
     render_usability_evidence()
@@ -254,7 +254,7 @@ def _render_audit(run: Any, package: Any, source_key: str) -> None:
 
 
 def _render_connected_detail_tabs(run: Any) -> None:
-    st.markdown('<div class="tg-section-title">04 · 문서·재무·실행 상세</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">05 · 문서·재무·실행 상세</div>', unsafe_allow_html=True)
     st.caption("공개 합성 거래에서도 실제 상세 엔진 결과를 확인할 수 있습니다.")
     document_tab, financial_tab, action_tab = st.tabs(["계약·L/C·정합성", "거래·재무 감내", "Action Plan"])
     with document_tab:
@@ -289,10 +289,9 @@ def _render_decision_mode() -> None:
     narrative = app.scenario_narrative(scenario_id)
     if narrative is not None and not presentation_mode:
         st.caption(f"결정 질문 · {narrative.decision_question}")
+    st.markdown('<div class="tg-section-title">01 · 통합 거래 판정</div>', unsafe_allow_html=True)
     render_decision_cockpit(run, scenario_id)
-    app._render_verdict(run)
     app._render_risks(run, presentation_mode=presentation_mode)
-    app._render_actions(run, presentation_mode=presentation_mode)
     render_decision_charts(run)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
     render_kb_handoff(run)
