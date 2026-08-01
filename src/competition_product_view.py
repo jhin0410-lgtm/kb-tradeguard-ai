@@ -1,10 +1,4 @@
-"""Compact competition-facing product consultation view.
-
-The public demo previously generated governed product candidates but hid them under
-a detail expander. This module surfaces the selected candidates without changing the
-underlying product-matching authority boundary.
-"""
-
+"""Competition-facing governed product consultation view."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,7 +7,6 @@ from html import escape
 import streamlit as st
 
 from .competition_fx_strategy_view import render_fx_consultation_comparison
-
 
 _STATUS_LABELS = {
     "consultation_candidate": "상담 후보",
@@ -101,7 +94,6 @@ def _need_labels(raw: str) -> tuple[str, ...]:
 
 def selected_product_candidates(run) -> list:
     """Return only candidates selected into the deterministic Decision Brief."""
-
     selected_ids = list(run.assessment_result.brief.product_candidate_ids)
     candidates_by_id = {
         item.product_candidate_id: item
@@ -110,7 +102,8 @@ def selected_product_candidates(run) -> list:
     return [candidates_by_id[item_id] for item_id in selected_ids if item_id in candidates_by_id]
 
 
-def build_product_consultation_cards(run, *, limit: int = 4) -> list[ProductConsultationCard]:
+def build_product_consultation_cards(run, *, limit: int = 3) -> list[ProductConsultationCard]:
+    """Rank governed candidates and return the top three by default."""
     if limit < 1:
         raise ValueError("limit must be at least 1")
     candidates = selected_product_candidates(run)
@@ -131,14 +124,10 @@ def build_product_consultation_cards(run, *, limit: int = 4) -> list[ProductCons
                 provider=candidate.provider,
                 product_name=candidate.product_or_service_name,
                 status=candidate.candidate_status,
-                status_label=_STATUS_LABELS.get(
-                    candidate.candidate_status, candidate.candidate_status
-                ),
+                status_label=_STATUS_LABELS.get(candidate.candidate_status, candidate.candidate_status),
                 matched_needs=_need_labels(candidate.matched_need),
                 next_action=candidate.next_action,
-                unresolved_conditions=tuple(
-                    candidate.unresolved_eligibility_conditions[:2]
-                ),
+                unresolved_conditions=tuple(candidate.unresolved_eligibility_conditions[:2]),
                 official_source_count=len(candidate.official_source_ids),
             )
         )
@@ -146,23 +135,19 @@ def build_product_consultation_cards(run, *, limit: int = 4) -> list[ProductCons
 
 
 def render_product_consultation_section(run, *, presentation_mode: bool) -> None:
-    """Render governed financing, insurance, guarantee, and hedge consultation cards."""
-
-    cards = build_product_consultation_cards(run)
+    """Render the actual top three candidates selected by the governed Decision Brief."""
+    cards = build_product_consultation_cards(run, limit=3)
     st.markdown(PRODUCT_VIEW_CSS, unsafe_allow_html=True)
     st.markdown('<div id="products" class="tg-section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">03 · 금융지원·다음 행동</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">05 · 금융·보험·보증 상담 후보</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="tg-product-boundary"><strong>추천의 의미</strong> · 거래 목적과 확인된 조건을 공개 상품정보에 연결한 상담 우선순위입니다. 적격성·승인·금리·한도·보험 인수·환헤지 적합성을 확정하지 않습니다.</div>',
+        '<div class="tg-product-boundary"><strong>추천의 의미</strong> · 현재 거래의 확인된 목적과 조건을 공개 상품정보에 연결한 상위 상담 후보입니다. 시나리오별 고정 목록이 아니며 적격성·승인·금리·한도·보험 인수·환헤지 적합성을 확정하지 않습니다.</div>',
         unsafe_allow_html=True,
     )
     if not cards:
         st.info("현재 Decision Brief에 선택된 상담 후보가 없습니다.")
     else:
-        columns = st.columns(min(len(cards), 4))
+        columns = st.columns(min(len(cards), 3))
         for column, card in zip(columns, cards):
             unresolved = " / ".join(card.unresolved_conditions) or "현재 공개정보 재확인"
             needs = " · ".join(card.matched_needs) or "거래 목적"
