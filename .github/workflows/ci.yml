@@ -14,7 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,10 +68,12 @@ jobs:
           path: dist/KB-TradeGuard-AI-prototype.zip
           if-no-files-found: error
           retention-days: 14
+      - name: Install Selenium capture dependency
+        run: python -m pip install selenium==4.35.0
       - name: Capture actual unified product UI
-        shell: pwsh
-        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture_submission_ui.ps1 -OutputDir outputs/ui-captures
+        run: python scripts/capture_submission_ui.py --output-dir outputs/ui-captures --startup-timeout 90 --render-timeout 90
       - name: Upload actual UI captures
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kb-tradeguard-ui-captures
