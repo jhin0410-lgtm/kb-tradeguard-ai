@@ -159,10 +159,10 @@ def _render_competition_page() -> None:
     else:
         _render_audit(run, scenario_id)
         with st.expander("상세 분석·공식 데이터·AI 구조", expanded=False):
-            render_portfolio_section(presentation_mode=False)
-            render_ai_boundary_section(presentation_mode=False)
-            render_official_case_study_section(presentation_mode=False)
-            render_official_data_section(presentation_mode=False)
+            render_portfolio_section(presentation_mode=presentation_mode)
+            render_ai_boundary_section(presentation_mode=presentation_mode)
+            render_official_case_study_section(presentation_mode=presentation_mode)
+            render_official_data_section(presentation_mode=presentation_mode)
         _render_bottom_nav()
     st.markdown("</div>", unsafe_allow_html=True)
 
