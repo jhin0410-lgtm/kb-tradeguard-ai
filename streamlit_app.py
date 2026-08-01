@@ -10,11 +10,24 @@ import streamlit as st
 import competition_app as app
 from src.competition_ai_boundary_view import render_ai_boundary_section
 from src.competition_case_study_view import render_official_case_study_section
-from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_evaluation import build_internal_trade_document_benchmark
-from src.competition_product_view import render_product_consultation_section
+from src.competition_executive_ui import (
+    EXECUTIVE_CSS,
+    build_executive_model,
+    render_api_status_matrix,
+    render_data_decision_impact,
+    render_decision_cockpit,
+    render_executive_hero,
+    render_financial_support,
+    render_mobile_stage_nav,
+    render_scenario_story,
+    render_stage_selector,
+    resolve_active_portfolio,
+)
+from src.competition_portfolio_view import render_portfolio_section
 from src.competition_real_data_view import render_official_data_section
 from src.competition_topic6 import prepare_topic6_demo_package
+from src.competition_usability_study import render_usability_study
 from src.demo_scenarios import DemoScenarioMetadata
 
 
@@ -75,7 +88,7 @@ def _render_internal_benchmark() -> None:
 def _render_audit(run, scenario_id: str) -> None:
     st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="tg-section-title">08 · 검증 현황과 감사 기록</div>',
+        '<div class="tg-section-title">검증 현황과 감사 기록</div>',
         unsafe_allow_html=True,
     )
     app._render_validation_status()
@@ -108,61 +121,75 @@ def _render_audit(run, scenario_id: str) -> None:
     app._render_qr()
 
 
-def _render_bottom_nav() -> None:
-    st.markdown(
-        """
-        <nav class="tg-bottom-nav" aria-label="공모전 데모 주요 구역">
-          <a href="#summary" target="_self">요약</a>
-          <a href="#evidence" target="_self">근거</a>
-          <a href="#actions" target="_self">실행</a>
-          <a href="#ai" target="_self">AI</a>
-          <a href="#products" target="_self">상품</a>
-          <a href="#data" target="_self">데이터</a>
-          <a href="#audit" target="_self">감사</a>
-        </nav>
-        """,
-        unsafe_allow_html=True,
-    )
+def _render_decision_stage(run, assessment, *, presentation_mode: bool):
+    model = render_decision_cockpit(run, assessment)
+    app._render_risks(run, presentation_mode=presentation_mode)
+    app._render_actions(run, presentation_mode=presentation_mode)
+    return model
+
+
+def _render_scenario_stage(assessment, *, presentation_mode: bool) -> None:
+    render_scenario_story(assessment)
+    if not presentation_mode:
+        with st.expander("상세 포트폴리오 표와 기업 사례 전환", expanded=False):
+            render_portfolio_section(presentation_mode=False)
+
+
+def _render_evidence_stage(run, scenario_id: str, *, presentation_mode: bool) -> None:
+    render_data_decision_impact()
+    render_official_case_study_section(presentation_mode=presentation_mode)
+    render_api_status_matrix()
+    render_ai_boundary_section(presentation_mode=presentation_mode)
+    render_official_data_section(presentation_mode=presentation_mode)
+    if not presentation_mode:
+        _render_audit(run, scenario_id)
 
 
 def _render_competition_page() -> None:
     presentation_mode = app._flag("presentation")
     mode_class = "tg-presentation" if presentation_mode else ""
     st.markdown(
-        app.detailed.APP_CSS + app.v2.V2_CSS + app.COMPETITION_CSS,
+        app.detailed.APP_CSS + app.v2.V2_CSS + app.COMPETITION_CSS + EXECUTIVE_CSS,
         unsafe_allow_html=True,
     )
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
-    app._render_hero()
-    render_workflow_map()
+    render_executive_hero()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
         scenario_id = app._render_scenario_control(scenario_id)
     run = _ensure_topic6_run(scenario_id)
+    _, assessment = resolve_active_portfolio()
+    model = build_executive_model(run, assessment)
+
     narrative = app.scenario_narrative(scenario_id)
     if narrative is not None and not presentation_mode:
         st.caption(f"결정 질문 · {narrative.decision_question}")
+    render_usability_study(run)
 
-    app._render_verdict(run)
-    app._render_risks(run, presentation_mode=presentation_mode)
-    app._render_actions(run, presentation_mode=presentation_mode)
-    render_portfolio_section(presentation_mode=presentation_mode)
-    render_ai_boundary_section(presentation_mode=presentation_mode)
-    render_product_consultation_section(run, presentation_mode=presentation_mode)
-    render_official_case_study_section(presentation_mode=presentation_mode)
-    render_official_data_section(presentation_mode=presentation_mode)
-    if not presentation_mode:
-        _render_audit(run, scenario_id)
-        _render_bottom_nav()
+    if presentation_mode:
+        model = _render_decision_stage(run, assessment, presentation_mode=True)
+        _render_scenario_stage(assessment, presentation_mode=True)
+        render_financial_support(run, model, presentation_mode=True)
+        _render_evidence_stage(run, scenario_id, presentation_mode=True)
+    else:
+        active_stage = render_stage_selector()
+        if active_stage == "decision":
+            _render_decision_stage(run, assessment, presentation_mode=False)
+        elif active_stage == "scenarios":
+            _render_scenario_stage(assessment, presentation_mode=False)
+        elif active_stage == "support":
+            render_financial_support(run, model, presentation_mode=False)
+        else:
+            _render_evidence_stage(run, scenario_id, presentation_mode=False)
+        render_mobile_stage_nav(active_stage, scenario_id)
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 def main() -> None:
-    # Explicit navigation prevents Streamlit from auto-publishing legacy modules in
-    # pages/. Only this governed competition page is registered in the deployment.
     st.set_page_config(
-        page_title="KB TradeGuard AI · 공모전 데모",
+        page_title="KB TradeGuard AI · 거래 의사결정 Cockpit",
         page_icon="🛡️",
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -171,6 +198,9 @@ def main() -> None:
         "KEXIM_API_KEY",
         "KCS_TRADE_API_KEY",
         "DATA_GO_KR_SERVICE_KEY",
+        "BOK_ECOS_API_KEY",
+        "OPENDART_API_KEY",
+        "NTS_BUSINESS_API_KEY",
         "TRADEGUARD_PUBLIC_DEMO_URL",
     ):
         _secret_to_environment(key)
