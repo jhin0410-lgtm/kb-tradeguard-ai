@@ -20,6 +20,7 @@ from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
+from src.competition_top_products import render_top_product_candidates
 from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import DemoScenarioMetadata
 
@@ -142,6 +143,7 @@ def _render_competition_page() -> None:
     render_decision_charts()
     render_portfolio_section(presentation_mode=presentation_mode)
     render_ai_boundary_section(presentation_mode=presentation_mode)
+    render_top_product_candidates(scenario_id)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
     render_kb_handoff()
     render_official_case_study_section(presentation_mode=presentation_mode)
