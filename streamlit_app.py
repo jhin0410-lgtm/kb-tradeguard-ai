@@ -269,6 +269,11 @@ def _render_decision_mode() -> None:
     presentation_mode = app._flag("presentation")
     mode_class = "tg-presentation" if presentation_mode else ""
     st.markdown(app.detailed.APP_CSS + app.v2.V2_CSS + app.COMPETITION_CSS, unsafe_allow_html=True)
+    if not presentation_mode:
+        st.markdown(
+            "<style class='tg-unified-sidebar-override'>[data-testid='stSidebar']{display:block !important}[data-testid='stSidebarCollapsedControl']{display:flex !important}</style>",
+            unsafe_allow_html=True,
+        )
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     app._render_hero()
     render_guided_nav()
