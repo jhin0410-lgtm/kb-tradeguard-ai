@@ -62,29 +62,48 @@ def test_decision_chart_frames_use_actual_governed_transaction_amounts() -> None
     assert set(frames) == {"exposure", "stress", "liquidity"}
 
 
-def test_canonical_entrypoint_uses_four_step_guided_flow() -> None:
+def test_kb_handoff_uses_current_governed_brief(monkeypatch) -> None:
+    run = _run()
+    rendered: list[str] = []
+    monkeypatch.setattr(cockpit.st, "markdown", lambda body, **kwargs: rendered.append(str(body)))
+
+    cockpit.render_kb_handoff(run)
+
+    html = "\n".join(rendered)
+    assert "현재 Case 기반" in html
+    assert str(len(run.assessment_result.brief.product_candidate_ids)) in html
+    assert run.assessment_result.brief.action_plan[0].title in html
+
+
+def test_canonical_entrypoint_exposes_one_command_and_connected_modes() -> None:
     text = Path("streamlit_app.py").read_text(encoding="utf-8")
     expected_order = [
         "render_decision_cockpit(run, scenario_id)",
         "render_decision_charts(run)",
         "render_product_consultation_section(run, presentation_mode=presentation_mode)",
-        "render_kb_handoff()",
+        "render_kb_handoff(run)",
     ]
     positions = [text.index(marker) for marker in expected_order]
     assert positions == sorted(positions)
-    for label in ("판정", "시나리오", "금융지원", "근거"):
+    for label in (
+        "Decision Desk",
+        "Analyst Workspace",
+        "Portfolio & Official Data",
+        "Evidence & Submission",
+    ):
         assert label in text
     assert 'id="final-audit"' in text
-    assert 'href="#final-audit"' in text
     assert "render_top_product_candidates" not in text
-    assert 'with st.expander("상세 분석·공식 데이터·AI 구조"' in text
+    assert "render_portfolio_section(presentation_mode=False, case=run.updated_case)" in text
+    assert "detailed._render_results" in text
+    assert "python -m streamlit run streamlit_app.py" in Path("README.md").read_text(encoding="utf-8")
 
 
 def test_mobile_cockpit_contract_is_present() -> None:
     text = Path("src/competition_decision_cockpit.py").read_text(encoding="utf-8")
     assert "@media(max-width:760px)" in text
     assert ".tg-kpi-grid{grid-template-columns:1fr 1fr}" in text
-    assert ".tg-next-grid{grid-template-columns:1fr}" in text
+    assert ".tg-next-grid,.tg-handoff-grid{grid-template-columns:1fr}" in text
 
 
 def test_top_three_products_are_governed_not_scenario_static() -> None:
@@ -94,6 +113,14 @@ def test_top_three_products_are_governed_not_scenario_static() -> None:
     assert "Decision Brief" in product_text
     assert "시나리오별 고정 목록이 아니며" in product_text
     assert "competition_top_products" not in entrypoint
+
+
+def test_connected_portfolio_accepts_active_case() -> None:
+    text = Path("src/competition_portfolio_view.py").read_text(encoding="utf-8")
+    assert "case: Any | None = None" in text
+    assert "Decision Desk 연결" in text
+    assert "active_case" in text
+    assert "match_portfolio_products(active_case)" not in text  # delegated through helper
 
 
 def test_usability_protocol_and_empty_template_are_present() -> None:
