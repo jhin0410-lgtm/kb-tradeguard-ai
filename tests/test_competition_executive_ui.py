@@ -1,3 +1,4 @@
+from inspect import signature
 from pathlib import Path
 
 from src.competition_executive_ui import (
@@ -8,6 +9,7 @@ from src.competition_executive_ui import (
     build_handoff_payload,
     build_liquidity_figure,
     provider_configuration_status,
+    render_decision_cockpit,
 )
 from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import load_demo_scenario
@@ -34,6 +36,14 @@ def test_executive_model_prioritizes_three_or_fewer_consultation_candidates():
     assert model.top_risk_title
     assert len(model.product_cards) <= 3
     assert model.missing_information_count >= 0
+
+
+def test_decision_cockpit_renderer_matches_canonical_runtime_call():
+    source = Path("streamlit_app.py").read_text(encoding="utf-8")
+
+    assert list(signature(render_decision_cockpit).parameters) == ["run"]
+    assert "model = render_decision_cockpit(run)" in source
+    assert "render_decision_cockpit(run, assessment)" not in source
 
 
 def test_financial_story_figures_are_populated_from_governed_portfolio_outputs():
