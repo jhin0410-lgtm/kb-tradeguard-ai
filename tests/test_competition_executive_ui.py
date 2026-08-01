@@ -28,6 +28,8 @@ def test_executive_model_prioritizes_three_or_fewer_consultation_candidates():
     model = build_executive_model(run, assessment)
 
     assert model.transaction_label
+    assert "금액 확인" not in model.transaction_label
+    assert "USD" in model.transaction_label
     assert model.disposition_headline
     assert model.top_risk_title
     assert len(model.product_cards) <= 3
@@ -103,6 +105,8 @@ def test_canonical_entrypoint_uses_guided_decision_cockpit_order():
 
     assert hero < selector
     assert decision < scenarios < support < evidence
+    assert "render_compact_stage_header(requested_stage)" in source
+    assert "데모 설정·전체 6단계 처리 흐름" in source
     assert "render_mobile_stage_nav" in source
     assert "단일 거래 Fixture" in source
     assert "별도 다중 거래 포트폴리오" in source
