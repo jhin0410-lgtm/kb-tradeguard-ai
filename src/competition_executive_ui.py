@@ -55,9 +55,6 @@ class ExecutiveModel:
     disposition_explanation: str
     top_risk_title: str
     missing_information_count: int
-    net_exposure_krw: Decimal | None
-    worst_stress_krw: Decimal | None
-    minimum_cash_krw: Decimal | None
     reviewed_data_count: int
     unavailable_data_count: int
     product_cards: tuple[ProductConsultationCard, ...]
@@ -133,10 +130,8 @@ def resolve_active_portfolio() -> tuple[Any, PortfolioAssessment]:
     return case, analyze_trade_portfolio(case)
 
 
-def build_executive_model(run, assessment: PortfolioAssessment) -> ExecutiveModel:
+def build_executive_model(run) -> ExecutiveModel:
     summary = build_risk_first_summary(run)
-    stress_values = [item.estimated_fx_value_change_krw for item in assessment.stress_points if item.estimated_fx_value_change_krw is not None]
-    liquidity_values = [item.ending_cash_krw for item in assessment.liquidity_buckets if item.ending_cash_krw is not None]
     assets = list(getattr(run.updated_case, "official_data_assets", {}).values())
     reviewed = sum(1 for item in assets if item.status in {"available", "partial"})
     unavailable = sum(1 for item in assets if item.status not in {"available", "partial"})
@@ -147,9 +142,6 @@ def build_executive_model(run, assessment: PortfolioAssessment) -> ExecutiveMode
         disposition_explanation=summary.disposition_explanation,
         top_risk_title=summary.top_risks[0].title if summary.top_risks else "중대한 순위 위험 없음",
         missing_information_count=len(summary.missing_information),
-        net_exposure_krw=assessment.net_exposure_krw,
-        worst_stress_krw=min(stress_values) if stress_values else None,
-        minimum_cash_krw=min(liquidity_values) if liquidity_values else None,
         reviewed_data_count=reviewed,
         unavailable_data_count=unavailable,
         product_cards=tuple(build_product_consultation_cards(run, limit=3)),
@@ -200,11 +192,22 @@ def render_stage_selector() -> str:
 
 
 def render_mobile_stage_nav(active_stage: str, scenario_id: str) -> None:
+    study_value = _query_value("study", "").strip().lower()
+    study_enabled = study_value in {"1", "true", "yes", "on"}
     links = []
     for code, label in STAGE_LABELS.items():
         short = label.split("·", 1)[1].strip()
-        links.append(f'<a href="?scenario={escape(scenario_id)}&stage={code}" data-active="{str(code == active_stage).lower()}">{escape(short)}</a>')
-    st.markdown('<nav class="tg-mobile-stage-nav" aria-label="TradeGuard guided stages">' + "".join(links) + "</nav>", unsafe_allow_html=True)
+        study_query = "&study=true" if study_enabled else ""
+        links.append(
+            f'<a href="?scenario={escape(scenario_id)}&stage={code}{study_query}" '
+            f'data-active="{str(code == active_stage).lower()}">{escape(short)}</a>'
+        )
+    st.markdown(
+        '<nav class="tg-mobile-stage-nav" aria-label="TradeGuard guided stages">'
+        + "".join(links)
+        + "</nav>",
+        unsafe_allow_html=True,
+    )
 
 
 def render_decision_cockpit(run, assessment: PortfolioAssessment) -> ExecutiveModel:
@@ -213,8 +216,11 @@ def render_decision_cockpit(run, assessment: PortfolioAssessment) -> ExecutiveMo
     presentation = disposition_presentation(model.disposition)
     data_state = f"{model.reviewed_data_count}개 검토" if model.reviewed_data_count else "고정 Snapshot 확인"
     st.markdown('<div id="decision" class="tg-section-anchor"></div><div class="tg-section-title">01 · 거래 의사결정 Cockpit</div>', unsafe_allow_html=True)
+    risk_count = len(model.summary.top_risks)
+    action_count = len(model.summary.next_actions)
+    candidate_count = len(model.product_cards)
     st.markdown(f"""
-    <div class="tg-cockpit"><section class="tg-decision-card" data-tone="{escape(presentation.tone)}"><small>{escape(model.transaction_label)} · {escape(presentation.eyebrow)}</small><h2>{escape(model.disposition_headline)}</h2><p>{escape(model.disposition_explanation)}</p><p><strong>가장 먼저 볼 위험</strong> · {escape(model.top_risk_title)}</p><p><strong>추가 확인</strong> · {model.missing_information_count}개 정보</p></section><div class="tg-cockpit-metrics"><div class="tg-cockpit-metric"><small>순 외환노출</small><strong>{escape(_format_krw(model.net_exposure_krw, signed=True))}</strong><span>동일통화 채권·채무와 외화현금 반영</span></div><div class="tg-cockpit-metric"><small>최악 FX 민감도</small><strong>{escape(_format_krw(model.worst_stress_krw, signed=True))}</strong><span>공개 ±5%·±10% 동시충격 중 최소값</span></div><div class="tg-cockpit-metric"><small>최저 예상 현금</small><strong>{escape(_format_krw(model.minimum_cash_krw))}</strong><span>월별 기대 현금흐름의 최저 기말잔액</span></div><div class="tg-cockpit-metric"><small>공식데이터 상태</small><strong>{escape(data_state)}</strong><span>미사용·미설정 {model.unavailable_data_count}개는 판단에서 분리</span></div></div></div>
+    <div class="tg-cockpit"><section class="tg-decision-card" data-tone="{escape(presentation.tone)}"><small>{escape(model.transaction_label)} · {escape(presentation.eyebrow)}</small><h2>{escape(model.disposition_headline)}</h2><p>{escape(model.disposition_explanation)}</p><p><strong>가장 먼저 볼 위험</strong> · {escape(model.top_risk_title)}</p><p><strong>추가 확인</strong> · {model.missing_information_count}개 정보</p></section><div class="tg-cockpit-metrics"><div class="tg-cockpit-metric"><small>상위 위험</small><strong>{risk_count}건</strong><span>현재 단일 거래 Decision Brief 기준</span></div><div class="tg-cockpit-metric"><small>추가 확인</small><strong>{model.missing_information_count}건</strong><span>거래 확정 전 보완할 정보</span></div><div class="tg-cockpit-metric"><small>우선 행동</small><strong>{action_count}건</strong><span>의존관계를 반영한 실행 순서</span></div><div class="tg-cockpit-metric"><small>상담 후보</small><strong>{candidate_count}건</strong><span>가입·승인이 아닌 상담 준비 후보</span></div></div></div>
     """, unsafe_allow_html=True)
     action_text = " → ".join(f"{item.sequence}. {item.title}" for item in model.summary.next_actions[:3]) or "현재 생성된 실행 행동 없음"
     st.markdown(f'<div class="tg-priority-strip"><strong>지금 할 일</strong><span>{escape(action_text)}</span></div>', unsafe_allow_html=True)
@@ -246,7 +252,14 @@ def build_exposure_waterfall(assessment: PortfolioAssessment) -> go.Figure:
     candidates = [item for item in assessment.currency_exposures if item.net_exposure_fc is not None]
     if not candidates:
         return go.Figure().update_layout(title="통화 노출 자료 없음", height=330)
-    exposure = max(candidates, key=lambda item: abs(item.net_exposure_fc))
+    exposure = max(
+        candidates,
+        key=lambda item: (
+            abs(item.net_exposure_krw)
+            if item.net_exposure_krw is not None
+            else Decimal("-1")
+        ),
+    )
     export_value = float(exposure.export_receivables_fc)
     import_value = -float(exposure.import_payables_fc)
     cash_value = float(exposure.foreign_cash_fc)
@@ -269,9 +282,22 @@ def render_scenario_story(assessment: PortfolioAssessment) -> None:
 
 def build_handoff_payload(run, model: ExecutiveModel) -> dict[str, Any]:
     brief = run.assessment_result.brief
+    identity = getattr(run.updated_case, "identity", None)
+    case_id = str(getattr(identity, "case_id", ""))
+    brief_reference_ids = list(
+        dict.fromkeys(
+            [
+                *brief.country_fact_ids,
+                *brief.compliance_screening_ids,
+                *brief.calculation_ids,
+                *brief.product_candidate_ids,
+                *brief.consultation_requirement_ids,
+            ]
+        )
+    )
     return {
         "schema_version": "kb-tradeguard-consultation-handoff/1.0",
-        "case_id": str(getattr(run.updated_case, "case_id", "")),
+        "case_id": case_id,
         "transaction_label": model.transaction_label,
         "disposition": model.disposition,
         "disposition_headline": model.disposition_headline,
@@ -279,7 +305,7 @@ def build_handoff_payload(run, model: ExecutiveModel) -> dict[str, Any]:
         "missing_information": list(model.summary.missing_information),
         "priority_actions": [{"sequence": item.sequence, "title": item.title, "responsible_party": item.responsible_party, "dependency_action_ids": list(item.dependency_action_ids)} for item in model.summary.next_actions[:3]],
         "consultation_candidates": [{"candidate_id": item.candidate_id, "provider": item.provider, "product_name": item.product_name, "status": item.status, "matched_needs": list(item.matched_needs), "unresolved_conditions": list(item.unresolved_conditions), "next_action": item.next_action} for item in model.product_cards],
-        "brief_reference_ids": list(getattr(brief, "reference_ids", []) or []),
+        "brief_reference_ids": brief_reference_ids,
         "authority_boundary": "Consultation preparation only. No approval, eligibility, pricing, limit, insurance acceptance, guarantee issuance, legal advice, or executable hedge instruction.",
     }
 
@@ -332,7 +358,7 @@ def provider_configuration_status() -> list[dict[str, str]]:
         ("관세청", "configured" if (os.getenv("KCS_TRADE_API_KEY") or os.getenv("DATA_GO_KR_SERVICE_KEY")) else "missing", "KCS_TRADE_API_KEY 또는 DATA_GO_KR_SERVICE_KEY"),
         ("BOK ECOS", "configured" if os.getenv("BOK_ECOS_API_KEY") else "missing", "BOK_ECOS_API_KEY"),
         ("OpenDART", "configured" if os.getenv("OPENDART_API_KEY") else "missing", "OPENDART_API_KEY"),
-        ("국세청", "configured" if os.getenv("NTS_BUSINESS_API_KEY") else "missing", "NTS_BUSINESS_API_KEY"),
+        ("국세청", "configured" if (os.getenv("NTS_BUSINESS_API_KEY") or os.getenv("DATA_GO_KR_SERVICE_KEY")) else "missing", "NTS_BUSINESS_API_KEY 또는 DATA_GO_KR_SERVICE_KEY"),
     ]
     return [{"provider": name, "state": state, "detail": detail} for name, state, detail in providers]
 

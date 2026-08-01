@@ -139,18 +139,12 @@ def _render_audit(run, scenario_id: str) -> None:
     app._render_qr()
 
 
-def _render_decision_stage(
-    run,
-    assessment,
-    *,
-    presentation_mode: bool,
-    portfolio_label: str,
-):
+def _render_decision_stage(run, *, presentation_mode: bool):
     st.markdown(
-        f'<div class="tg-chart-note"><strong>분석 범위</strong> · 왼쪽 판정과 위험은 선택된 단일 거래 Fixture 기준입니다. 오른쪽 외환노출·현금·스트레스 수치는 <strong>{escape(portfolio_label)}</strong>의 별도 다중 거래 포트폴리오 예시이며, 단일 거래 승인 결론을 덮어쓰지 않습니다.</div>',
+        '<div class="tg-chart-note"><strong>분석 범위</strong> · 이 단계의 판정, 위험, 행동, 상담 후보는 선택된 단일 거래 Fixture만 사용합니다. 별도 다중 거래 포트폴리오의 외환노출·유동성 수치는 2단계 시나리오에서 별도 예시로 표시하며 이 판정을 덮어쓰지 않습니다.</div>',
         unsafe_allow_html=True,
     )
-    model = render_decision_cockpit(run, assessment)
+    model = render_decision_cockpit(run)
     app._render_risks(run, presentation_mode=presentation_mode)
     app._render_actions(run, presentation_mode=presentation_mode)
     return model
@@ -199,9 +193,8 @@ def _render_competition_page() -> None:
             render_workflow_map()
 
     run = _ensure_topic6_run(scenario_id)
-    portfolio_case, assessment = resolve_active_portfolio()
-    portfolio_label = portfolio_case.identity.company_name or portfolio_case.identity.case_id
-    model = build_executive_model(run, assessment)
+    _, assessment = resolve_active_portfolio()
+    model = build_executive_model(run)
 
     narrative = app.scenario_narrative(scenario_id)
     if narrative is not None and not presentation_mode:
@@ -209,23 +202,13 @@ def _render_competition_page() -> None:
     render_usability_study(run)
 
     if presentation_mode:
-        model = _render_decision_stage(
-            run,
-            assessment,
-            presentation_mode=True,
-            portfolio_label=portfolio_label,
-        )
+        model = _render_decision_stage(run, presentation_mode=True)
         _render_scenario_stage(assessment, presentation_mode=True)
         render_financial_support(run, model, presentation_mode=True)
         _render_evidence_stage(run, scenario_id, presentation_mode=True)
     else:
         if active_stage == "decision":
-            _render_decision_stage(
-                run,
-                assessment,
-                presentation_mode=False,
-                portfolio_label=portfolio_label,
-            )
+            _render_decision_stage(run, presentation_mode=False)
         elif active_stage == "scenarios":
             _render_scenario_stage(assessment, presentation_mode=False)
         elif active_stage == "support":

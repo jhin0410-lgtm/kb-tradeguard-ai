@@ -1,6 +1,15 @@
 import pytest
 
-from src.competition_usability_study import evaluate_usability_response
+from pathlib import Path
+
+from src.assessment_app_v2 import build_risk_first_summary
+from src.competition_topic6 import prepare_topic6_demo_package
+from src.competition_usability_study import (
+    build_neutral_study_options,
+    evaluate_usability_response,
+)
+from src.demo_scenarios import load_demo_scenario
+from src.intelligence.single_transaction_package import run_single_transaction_package
 
 
 def test_usability_result_scores_risk_and_action_independently():
@@ -43,3 +52,19 @@ def test_usability_result_uses_anonymous_code_and_never_accepts_negative_time():
             expected_risk_id="RISK-1",
             expected_action_id="ACTION-1",
         )
+
+
+def test_study_options_hide_governed_rank_and_require_explicit_selection():
+    package = prepare_topic6_demo_package(load_demo_scenario("oa_high_risk"))
+    run = run_single_transaction_package(package)
+    summary = build_risk_first_summary(run)
+    risk_options, action_options = build_neutral_study_options(summary)
+
+    assert risk_options
+    assert action_options
+    assert all(not label[:1].isdigit() for label in risk_options)
+    assert all(not label[:1].isdigit() for label in action_options)
+
+    source = Path("src/competition_usability_study.py").read_text(encoding="utf-8")
+    assert source.count("index=None") == 2
+    assert "disabled=not selections_complete" in source
