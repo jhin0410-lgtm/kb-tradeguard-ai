@@ -4,16 +4,16 @@
 
 `streamlit_app.py` is the only user-facing execution and deployment entrypoint.
 
-The same application contains four connected modes:
+The same product shell connects the following workflows:
 
 ```text
 Decision Desk
-Analyst Workspace
 Portfolio & Official Data
 Evidence & Submission
+Analyst Workspace (local/private only)
 ```
 
-The public presentation URL always opens the synthetic Decision Desk and hides workspace navigation.
+The public deployment defaults to synthetic, read-only operation. Reviewed-input upload and optional Live AI are not exposed unless the private workspace flag is explicitly enabled in a local or access-controlled environment.
 
 ## Run locally
 
@@ -34,17 +34,34 @@ Presentation URL:
 http://localhost:8501/?presentation=1&scenario=oa_high_risk
 ```
 
-Additional modes:
+Public-safe connected modes:
 
 ```text
-http://localhost:8501/?mode=analyst
+http://localhost:8501/?mode=decision
 http://localhost:8501/?mode=portfolio
 http://localhost:8501/?mode=evidence
 ```
 
+## Enable the private Analyst Workspace
+
+PowerShell:
+
+```powershell
+$env:TRADEGUARD_ENABLE_PRIVATE_WORKSPACE="1"
+python -m streamlit run streamlit_app.py
+```
+
+Then open:
+
+```text
+http://localhost:8501/?mode=analyst
+```
+
+Do not enable this mode on the public competition deployment. Use only reviewed JSON Packages in a local or access-controlled environment, and do not upload real customer information or credentials.
+
 ## Public deployment
 
-Streamlit Cloud app file:
+Streamlit Cloud Main file path:
 
 ```text
 streamlit_app.py
@@ -62,62 +79,52 @@ Presentation URL:
 https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/?presentation=1&scenario=oa_high_risk
 ```
 
-Configure the public QR URL through:
+Public deployment settings:
 
 ```text
 TRADEGUARD_PUBLIC_DEMO_URL=https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/
+TRADEGUARD_ENABLE_PRIVATE_WORKSPACE=false
 ```
 
-The QR is generated locally and no external QR service is used.
+The QR is generated inside the application and no external QR service is used.
 
 ## Decision Desk
 
 The default synthetic case runs automatically and displays:
 
-1. active company, scenario, country, transaction count and governed disposition;
-2. current transaction decision cockpit;
+1. active company, source context, country, transaction count and governed disposition;
+2. current transaction Decision Cockpit;
 3. top risks and Evidence IDs;
 4. governed Action Plan;
 5. transaction-value-based FX Stress;
 6. natural hedge and net exposure;
 7. monthly ending cash;
 8. dynamic ProductCandidate top three;
-9. current-case KB consultation handoff;
-10. validation and audit downloads.
+9. current-Case KB consultation handoff;
+10. public synthetic contract/L/C, reconciliation, financial-capacity and Action Plan details;
+11. validation and audit downloads.
 
 Scenario changes rerun the same five-stage deterministic pipeline. Values are not inferred or silently corrected.
 
-## Analyst Workspace
-
-The workspace is available inside the same application but must be treated as a Private/local review surface.
-
-- reviewed JSON Package input;
-- contract and L/C findings;
-- document reconciliation;
-- transaction-capacity analysis;
-- Human Review Overlay;
-- full ProductCandidate view;
-- Action dependency;
-- audit ZIP;
-- optional Grounded Live AI.
-
-Do not upload real customer information or credentials to the public deployment.
-
 ## Portfolio & Official Data
 
-This mode receives the active `run.updated_case` from Decision Desk.
+This mode receives the active governed Case from Decision Desk. When private mode is enabled and a reviewed Package has been executed, it instead follows that reviewed Case.
 
-It does not default to an unrelated demo workspace when an active Case exists.
+It does not default to an unrelated portfolio demo when an active Case exists.
 
 - currency exposure;
 - natural hedge;
 - monthly liquidity;
 - FX sensitivity;
-- current-case product candidates;
+- current-Case product candidates;
 - attached official-data Snapshot status;
-- optional read-only official API surfaces.
+- pinned World Bank and UN Comtrade context cases;
+- optional read-only official API surfaces;
+- AI, deterministic engine and Human Review boundaries.
 
 ## Evidence & Submission
+
+This mode follows the same active run and Package.
 
 - 22 rules;
 - 30 Gold cases;
@@ -126,19 +133,37 @@ It does not default to an unrelated demo workspace when an active Case exists.
 - Package/Input/Output hash;
 - presentation HTML;
 - audit JSON;
+- Markdown report;
+- Decision Brief JSON;
 - detailed audit bundle.
 
 These values describe internal deterministic regression and traceability. They do not establish legal accuracy, transaction safety, bank approval, K-SURE acceptance, insurance coverage or product eligibility.
 
+## Analyst Workspace
+
+The private workspace reuses the same deterministic engine and adds:
+
+- reviewed JSON Package input;
+- contract and L/C findings;
+- document reconciliation;
+- transaction-capacity analysis;
+- Human Review Overlay;
+- full ProductCandidate view;
+- Action dependencies and required documents;
+- audit ZIP;
+- optional Grounded Live AI.
+
+It is disabled by default on the public deployment.
+
 ## Presentation mode
 
-`presentation=1` keeps only the four-step narrative:
+`presentation=1` forces Decision Desk and keeps only the four-step narrative:
 
 ```text
 거래 판정 → 위험 시나리오 → 금융지원 → 근거·검증
 ```
 
-It hides the sidebar, scenario controls and detailed workspace modes.
+It hides mode navigation, scenario controls and private-workspace surfaces.
 
 ## Capture list
 
@@ -147,13 +172,14 @@ It hides the sidebar, scenario controls and detailed workspace modes.
 3. top risk with evidence open;
 4. FX Stress and net exposure;
 5. dynamic ProductCandidate cards;
-6. current-case KB handoff;
-7. mode navigation in normal view;
-8. Analyst Workspace document tab;
-9. connected Portfolio view;
+6. current-Case KB handoff;
+7. public synthetic document and financial details;
+8. connected Portfolio view;
+9. Official Data view;
 10. Evidence & Submission downloads;
-11. mobile view;
-12. presentation full screen.
+11. private Analyst Workspace only in a local capture environment;
+12. mobile view;
+13. presentation full screen.
 
 Do not capture browser account information, local paths, API keys or real customer information.
 
