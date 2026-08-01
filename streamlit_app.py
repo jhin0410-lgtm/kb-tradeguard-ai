@@ -1,5 +1,4 @@
 """Canonical isolated deployment entrypoint for the competition demo."""
-
 from __future__ import annotations
 
 import json
@@ -10,29 +9,28 @@ import streamlit as st
 import competition_app as app
 from src.competition_ai_boundary_view import render_ai_boundary_section
 from src.competition_case_study_view import render_official_case_study_section
-from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
+from src.competition_decision_cockpit import (
+    render_decision_charts,
+    render_decision_cockpit,
+    render_guided_nav,
+    render_kb_handoff,
+    render_usability_evidence,
+)
 from src.competition_evaluation import build_internal_trade_document_benchmark
+from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
+from src.competition_top_products import render_top_product_candidates
 from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import DemoScenarioMetadata
 
-
 PUBLIC_DEMO_URL = "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
 
-# The public URL is not a secret. Deployment configuration is applied in main so a
-# Streamlit secret can override this fallback on forks or renamed applications.
-
-# competition_app originally called the display field ``label`` while the governed
-# metadata contract names it ``title``. Keep the deployment entrypoint backward
-# compatible without changing scenario content or deterministic assessment behavior.
 if not hasattr(DemoScenarioMetadata, "label"):
     DemoScenarioMetadata.label = property(lambda item: item.title)  # type: ignore[attr-defined]
 
 
 def _secret_to_environment(name: str) -> None:
-    """Expose an explicitly configured Streamlit secret to read-only providers."""
-
     if os.getenv(name):
         return
     try:
@@ -73,13 +71,11 @@ def _render_internal_benchmark() -> None:
 
 
 def _render_audit(run, scenario_id: str) -> None:
-    st.markdown('<div id="audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="tg-section-title">08 · 검증 현황과 감사 기록</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div id="final-audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">04 · 근거·검증·감사</div>', unsafe_allow_html=True)
     app._render_validation_status()
     _render_internal_benchmark()
+    render_usability_evidence()
     st.divider()
     snapshot = app.build_presentation_snapshot_v2(run, scenario_id=scenario_id)
     html = app.render_presentation_snapshot_html(snapshot)
@@ -93,14 +89,12 @@ def _render_audit(run, scenario_id: str) -> None:
     )
     right.download_button(
         "감사 JSON 저장",
-        data=(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode(
-            "utf-8"
-        ),
+        data=(json.dumps(snapshot, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
         file_name="kb-tradeguard-competition-snapshot.json",
         mime="application/json",
         use_container_width=True,
     )
-    with st.expander("Case hash 및 전체 감사 산출물", expanded=False):
+    with st.expander("판단 근거 번호·Case hash·전체 감사 산출물", expanded=False):
         package = st.session_state.get("competition_package")
         if package is not None:
             app.detailed._render_audit_tab(run, package, scenario_id)
@@ -112,14 +106,13 @@ def _render_bottom_nav() -> None:
     st.markdown(
         """
         <nav class="tg-bottom-nav" aria-label="공모전 데모 주요 구역">
-          <a href="#summary" target="_self">요약</a>
-          <a href="#evidence" target="_self">근거</a>
-          <a href="#actions" target="_self">실행</a>
-          <a href="#ai" target="_self">AI</a>
-          <a href="#products" target="_self">상품</a>
-          <a href="#data" target="_self">데이터</a>
-          <a href="#audit" target="_self">감사</a>
+          <a href="#summary" target="_self">판정</a>
+          <a href="#scenarios" target="_self">시나리오</a>
+          <a href="#products" target="_self">금융지원</a>
+          <a href="#final-audit" target="_self">근거</a>
         </nav>
+        <!-- Legacy direct-link contracts retained: #ai #data -->
+        <!-- Public competition navigation intentionally excludes legacy pages/ routes. -->
         """,
         unsafe_allow_html=True,
     )
@@ -128,13 +121,13 @@ def _render_bottom_nav() -> None:
 def _render_competition_page() -> None:
     presentation_mode = app._flag("presentation")
     mode_class = "tg-presentation" if presentation_mode else ""
-    st.markdown(
-        app.detailed.APP_CSS + app.v2.V2_CSS + app.COMPETITION_CSS,
-        unsafe_allow_html=True,
-    )
+    st.markdown(app.detailed.APP_CSS + app.v2.V2_CSS + app.COMPETITION_CSS, unsafe_allow_html=True)
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     app._render_hero()
-    render_workflow_map()
+    render_guided_nav()
+    if not presentation_mode:
+        with st.expander("전체 업무 흐름 보기", expanded=False):
+            render_workflow_map()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
@@ -144,12 +137,16 @@ def _render_competition_page() -> None:
     if narrative is not None and not presentation_mode:
         st.caption(f"결정 질문 · {narrative.decision_question}")
 
+    render_decision_cockpit(run, scenario_id)
     app._render_verdict(run)
     app._render_risks(run, presentation_mode=presentation_mode)
     app._render_actions(run, presentation_mode=presentation_mode)
+    render_decision_charts()
     render_portfolio_section(presentation_mode=presentation_mode)
     render_ai_boundary_section(presentation_mode=presentation_mode)
+    render_top_product_candidates(scenario_id)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
+    render_kb_handoff()
     render_official_case_study_section(presentation_mode=presentation_mode)
     render_official_data_section(presentation_mode=presentation_mode)
     if not presentation_mode:
@@ -159,10 +156,8 @@ def _render_competition_page() -> None:
 
 
 def main() -> None:
-    # Explicit navigation prevents Streamlit from auto-publishing legacy modules in
-    # pages/. Only this governed competition page is registered in the deployment.
     st.set_page_config(
-        page_title="KB TradeGuard AI · 공모전 데모",
+        page_title="KB TradeGuard AI · 거래 의사결정 데모",
         page_icon="🛡️",
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -175,12 +170,7 @@ def main() -> None:
     ):
         _secret_to_environment(key)
     os.environ.setdefault("TRADEGUARD_PUBLIC_DEMO_URL", PUBLIC_DEMO_URL)
-    page = st.Page(
-        _render_competition_page,
-        title="KB TradeGuard AI",
-        icon="🛡️",
-        default=True,
-    )
+    page = st.Page(_render_competition_page, title="KB TradeGuard AI", icon="🛡️", default=True)
     st.navigation([page], position="hidden").run()
 
 
