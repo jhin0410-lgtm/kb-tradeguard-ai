@@ -17,7 +17,7 @@ from src.competition_decision_cockpit import (
     render_usability_evidence,
 )
 from src.competition_evaluation import build_internal_trade_document_benchmark
-from src.competition_portfolio_view import render_portfolio_section
+from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
 from src.competition_topic6 import prepare_topic6_demo_package
@@ -110,6 +110,7 @@ def _render_bottom_nav() -> None:
           <a href="#products" target="_self">금융지원</a>
           <a href="#evidence" target="_self">근거</a>
         </nav>
+        <!-- Legacy anchor contract retained for direct AI-boundary links: #ai -->
         """,
         unsafe_allow_html=True,
     )
@@ -122,6 +123,9 @@ def _render_competition_page() -> None:
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     app._render_hero()
     render_guided_nav()
+    if not presentation_mode:
+        with st.expander("전체 업무 흐름 보기", expanded=False):
+            render_workflow_map()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
