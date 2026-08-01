@@ -1,0 +1,131 @@
+name: temporary-study-mode-ui-audit
+
+on:
+  pull_request:
+    branches:
+      - automation/study-mode-ui-audit-base
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -r requirements.txt playwright
+      - run: python -m playwright install chromium
+      - name: Audit usability-study interaction
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path study-audit | Out-Null
+          @'
+          import json
+          import subprocess
+          import sys
+          import time
+          import urllib.request
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          base = "http://127.0.0.1:8501/"
+          output = Path("study-audit")
+          stdout = (output / "streamlit-out.log").open("w", encoding="utf-8")
+          stderr = (output / "streamlit-err.log").open("w", encoding="utf-8")
+          process = subprocess.Popen(
+              [sys.executable, "-m", "streamlit", "run", "streamlit_app.py", "--server.headless", "true", "--server.port", "8501", "--browser.gatherUsageStats", "false"],
+              stdout=stdout,
+              stderr=stderr,
+          )
+          result = {"status": "failed"}
+          try:
+              deadline = time.time() + 120
+              while time.time() < deadline:
+                  if process.poll() is not None:
+                      raise RuntimeError(f"Streamlit exited with code {process.returncode}")
+                  try:
+                      with urllib.request.urlopen(base + "_stcore/health", timeout=3) as response:
+                          if response.status == 200:
+                              break
+                  except Exception:
+                      time.sleep(2)
+              else:
+                  raise RuntimeError("Streamlit did not become healthy")
+
+              with sync_playwright() as p:
+                  browser = p.chromium.launch(headless=True)
+                  page = browser.new_page(viewport={"width": 390, "height": 844})
+                  page.goto(base + "?stage=decision&study=true", wait_until="domcontentloaded", timeout=120_000)
+                  start = page.get_by_role("button", name="과제 시작")
+                  start.wait_for(timeout=120_000)
+                  start.click()
+                  deadline = time.time() + 120
+                  selects = page.locator('[data-baseweb="select"]')
+                  complete = page.get_by_role("button", name="과제 완료")
+                  while time.time() < deadline:
+                      if selects.count() >= 2 and complete.count() == 1:
+                          break
+                      page.wait_for_timeout(1200)
+                  if selects.count() < 2:
+                      raise AssertionError(f"Expected two study selectboxes, got {selects.count()}")
+                  if not complete.is_disabled():
+                      raise AssertionError("Study completion was enabled before explicit selections")
+
+                  selects.first.click()
+                  page.locator('[role="option"]').first.wait_for(timeout=30_000)
+                  options = [text.strip() for text in page.locator('[role="option"]').all_inner_texts()]
+                  if not options:
+                      raise AssertionError("Risk options were not rendered")
+                  if any(text[:2] in {"1.", "2.", "3."} for text in options):
+                      raise AssertionError(f"Study mode leaked ranked options: {options}")
+                  page.keyboard.press("Escape")
+
+                  links = page.locator('.tg-mobile-stage-nav a')
+                  if links.count() != 4:
+                      raise AssertionError(f"Expected four study navigation links, got {links.count()}")
+                  hrefs = []
+                  for index in range(links.count()):
+                      href = links.nth(index).get_attribute("href") or ""
+                      hrefs.append(href)
+                      if "study=true" not in href:
+                          raise AssertionError(f"Study query missing from mobile link: {href}")
+
+                  geometry = page.evaluate("() => ({scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, overflow: document.documentElement.scrollWidth > window.innerWidth + 4})")
+                  if geometry["overflow"]:
+                      raise AssertionError(f"Study mobile horizontal overflow: {geometry}")
+                  page.screenshot(path=str(output / "study-mobile.png"), full_page=True)
+                  result = {
+                      "status": "passed",
+                      "selectbox_count": selects.count(),
+                      "completion_disabled_before_selection": True,
+                      "rank_options_hidden": True,
+                      "study_links": hrefs,
+                      "geometry": geometry,
+                  }
+                  browser.close()
+          finally:
+              (output / "study-audit.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+              process.terminate()
+              try:
+                  process.wait(timeout=10)
+              except subprocess.TimeoutExpired:
+                  process.kill()
+              stdout.close()
+              stderr.close()
+          '@ | Set-Content -Encoding UTF8 study-audit/run_study_audit.py
+          python study-audit/run_study_audit.py
+      - name: Upload study audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: usability-study-ui-audit
+          path: study-audit/
+          if-no-files-found: warn
+          retention-days: 14
