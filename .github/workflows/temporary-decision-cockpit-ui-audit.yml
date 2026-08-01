@@ -1,9 +1,9 @@
 name: temporary-decision-cockpit-ui-audit
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/decision-cockpit-ui-v2
+      - automation/decision-cockpit-ui-audit-base
 
 permissions:
   contents: read
@@ -29,6 +29,7 @@ jobs:
           $process = Start-Process python -ArgumentList '-m','streamlit','run','streamlit_app.py','--server.headless','true','--server.port','8501','--browser.gatherUsageStats','false' -PassThru -RedirectStandardOutput ui-audit/streamlit-out.log -RedirectStandardError ui-audit/streamlit-err.log
           $process.Id | Out-File -Encoding ascii ui-audit/streamlit.pid
           $deadline = (Get-Date).AddMinutes(2)
+          $response = $null
           do {
             try {
               $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8501/_stcore/health' -UseBasicParsing -TimeoutSec 5
@@ -53,7 +54,7 @@ jobs:
           OUTPUT = Path("ui-audit")
           OUTPUT.mkdir(exist_ok=True)
           CASES = [
-              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "지금 할 일"], 0, False),
+              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "지금 할 일", "분석 범위"], 0, False),
               ("scenarios-desktop", "?stage=scenarios", {"width": 1440, "height": 1000}, ["손익·유동성·자연헤지 시나리오"], 3, False),
               ("support-desktop", "?stage=support", {"width": 1440, "height": 1000}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1", "상담 준비 패키지"], 0, False),
               ("evidence-desktop", "?stage=evidence", {"width": 1440, "height": 1000}, ["공식데이터가 판단에 미치는 영향", "공식 API 연결 상태"], 0, False),
