@@ -3,7 +3,7 @@ name: temporary-decision-cockpit-ui-audit
 on:
   pull_request:
     branches:
-      - automation/decision-cockpit-ui-audit-base-v2
+      - automation/decision-cockpit-ui-audit-base-v3
 
 permissions:
   contents: read
@@ -39,15 +39,15 @@ jobs:
           OUTPUT = Path("ui-audit")
           OUTPUT.mkdir(exist_ok=True)
           CASES = [
-              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "지금 할 일", "분석 범위"], 0, False),
-              ("scenarios-desktop", "?stage=scenarios", {"width": 1440, "height": 1000}, ["손익·유동성·자연헤지 시나리오"], 3, False),
-              ("support-desktop", "?stage=support", {"width": 1440, "height": 1000}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1", "상담 준비 패키지"], 0, False),
-              ("evidence-desktop", "?stage=evidence", {"width": 1440, "height": 1000}, ["공식데이터가 판단에 미치는 영향", "공식 API 연결 상태"], 0, False),
-              ("presentation-desktop", "?presentation=true", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "손익·유동성·자연헤지 시나리오", "우선 금융지원과 KB 상담 Handoff", "공식데이터가 판단에 미치는 영향"], 3, False),
-              ("decision-mobile", "?stage=decision", {"width": 390, "height": 844}, ["거래 의사결정 Cockpit", "지금 할 일"], 0, True),
-              ("scenarios-mobile", "?stage=scenarios", {"width": 390, "height": 844}, ["손익·유동성·자연헤지 시나리오"], 3, True),
-              ("support-mobile", "?stage=support", {"width": 390, "height": 844}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1"], 0, True),
-              ("study-mobile", "?stage=decision&study=true", {"width": 390, "height": 844}, ["사용성 검증 모드", "과제 시작"], 0, True),
+              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "지금 할 일", "분석 범위"], 0, False, "01 · 거래 의사결정 Cockpit"),
+              ("scenarios-desktop", "?stage=scenarios", {"width": 1440, "height": 1000}, ["손익·유동성·자연헤지 시나리오"], 3, False, "02 · 손익·유동성·자연헤지 시나리오"),
+              ("support-desktop", "?stage=support", {"width": 1440, "height": 1000}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1", "상담 준비 패키지"], 0, False, "03 · 우선 금융지원과 KB 상담 Handoff"),
+              ("evidence-desktop", "?stage=evidence", {"width": 1440, "height": 1000}, ["공식데이터가 판단에 미치는 영향", "공식 API 연결 상태"], 0, False, "04 · 공식데이터가 판단에 미치는 영향"),
+              ("presentation-desktop", "?presentation=true", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "손익·유동성·자연헤지 시나리오", "우선 금융지원과 KB 상담 Handoff", "공식데이터가 판단에 미치는 영향"], 3, False, None),
+              ("decision-mobile", "?stage=decision", {"width": 390, "height": 844}, ["거래 의사결정 Cockpit", "지금 할 일"], 0, True, "01 · 거래 의사결정 Cockpit"),
+              ("scenarios-mobile", "?stage=scenarios", {"width": 390, "height": 844}, ["손익·유동성·자연헤지 시나리오"], 3, True, "02 · 손익·유동성·자연헤지 시나리오"),
+              ("support-mobile", "?stage=support", {"width": 390, "height": 844}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1"], 0, True, "03 · 우선 금융지원과 KB 상담 Handoff"),
+              ("study-mobile", "?stage=decision&study=true", {"width": 390, "height": 844}, ["사용성 검증 모드", "과제 시작"], 0, True, "사용성 검증 모드"),
           ]
 
           stdout = (OUTPUT / "streamlit-out.log").open("w", encoding="utf-8")
@@ -74,7 +74,7 @@ jobs:
 
               with sync_playwright() as p:
                   browser = p.chromium.launch(headless=True)
-                  for name, suffix, viewport, required, min_charts, mobile in CASES:
+                  for name, suffix, viewport, required, min_charts, mobile, focus_text in CASES:
                       page = browser.new_page(viewport=viewport)
                       page.goto(BASE + suffix, wait_until="domcontentloaded", timeout=120_000)
                       page.get_by_text("KB TRADEGUARD AI", exact=False).first.wait_for(timeout=120_000)
@@ -86,6 +86,12 @@ jobs:
                           "() => ({scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, overflow: document.documentElement.scrollWidth > window.innerWidth + 4})"
                       )
                       nav_count = page.locator(".tg-mobile-stage-nav").count()
+                      focus_y = None
+                      if focus_text:
+                          focus = page.get_by_text(focus_text, exact=False).first
+                          focus.wait_for(timeout=30_000)
+                          box = focus.bounding_box()
+                          focus_y = box["y"] if box else None
                       if missing:
                           raise AssertionError(f"{name}: missing text {missing}")
                       if chart_count < min_charts:
@@ -94,6 +100,8 @@ jobs:
                           raise AssertionError(f"{name}: horizontal overflow {overflow}")
                       if mobile and nav_count != 1:
                           raise AssertionError(f"{name}: expected one mobile nav, got {nav_count}")
+                      if focus_y is not None and focus_y > viewport["height"] * 0.98:
+                          raise AssertionError(f"{name}: primary stage content begins below the first viewport at y={focus_y}")
                       page.screenshot(path=str(OUTPUT / f"{name}.png"), full_page=True)
                       results.append({
                           "name": name,
@@ -102,6 +110,7 @@ jobs:
                           "required_text": required,
                           "chart_count": chart_count,
                           "mobile_nav_count": nav_count,
+                          "focus_y": focus_y,
                           "geometry": overflow,
                           "status": "passed",
                       })
