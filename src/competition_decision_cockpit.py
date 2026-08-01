@@ -1,7 +1,8 @@
 """Decision-first public competition UI for KB TradeGuard AI.
 
 This module stays presentation-only: it consumes reviewed deterministic outputs and
-never performs financial calculations or provider calls.
+never performs financial calculations or provider calls beyond invoking the existing
+portfolio aggregation engine against the governed case snapshot.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ from typing import Any
 
 import pandas as pd
 import streamlit as st
+
+from .intelligence.portfolio_assessment import analyze_trade_portfolio
 
 COCKPIT_CSS = """
 <style>
@@ -100,7 +103,7 @@ def render_guided_nav() -> None:
         """
         <div class="tg-guide">
           <a href="#summary" target="_self">1 · 거래 판정</a>
-          <a href="#scenarios" target="_self">2 · 시나리오</a>
+          <a href="#scenarios" target="_self">2 · 위험 시나리오</a>
           <a href="#products" target="_self">3 · 금융지원</a>
           <a href="#final-audit" target="_self">4 · 근거·감사</a>
         </div>
@@ -180,37 +183,96 @@ def render_decision_cockpit(run: Any, scenario_id: str) -> None:
     )
 
 
-def render_decision_charts() -> None:
-    """Render clearly labeled explanatory normalized-index charts."""
+def build_decision_chart_frames(run: Any) -> tuple[dict[str, pd.DataFrame], list[str]]:
+    """Build chart-ready frames only from the governed case and deterministic engine."""
+    try:
+        assessment = analyze_trade_portfolio(run.updated_case)
+    except (TypeError, ValueError) as exc:
+        return {}, [str(exc)]
+
+    exposure_rows = [
+        {
+            "통화": item.currency,
+            "수출채권": float(item.export_receivables_fc),
+            "수입채무": -float(item.import_payables_fc),
+            "외화현금": float(item.foreign_cash_fc),
+            "순노출": float(item.net_exposure_fc),
+        }
+        for item in assessment.currency_exposures
+    ]
+    stress_rows = [
+        {
+            "환율충격(%)": float(item.shock_percent),
+            "추정가치변화(KRW)": float(item.estimated_fx_value_change_krw),
+        }
+        for item in assessment.stress_points
+        if item.impacted_currencies
+    ]
+    if stress_rows:
+        stress_rows.append({"환율충격(%)": 0.0, "추정가치변화(KRW)": 0.0})
+        stress_rows.sort(key=lambda item: item["환율충격(%)"])
+    liquidity_rows = [
+        {
+            "월": item.period,
+            "기말현금(KRW)": float(item.ending_cash_krw),
+        }
+        for item in assessment.liquidity_buckets
+        if item.ending_cash_krw is not None
+    ]
+    frames = {
+        "exposure": pd.DataFrame(exposure_rows),
+        "stress": pd.DataFrame(stress_rows),
+        "liquidity": pd.DataFrame(liquidity_rows),
+    }
+    return frames, list(assessment.missing_inputs)
+
+
+def render_decision_charts(run: Any) -> None:
+    """Render actual governed exposure, stress, and liquidity values when available."""
     st.markdown('<div id="scenarios" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">02 · 시나리오와 현금흐름</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">02 · 실제 위험 시나리오와 현금흐름</div>', unsafe_allow_html=True)
+    frames, missing_inputs = build_decision_chart_frames(run)
+    if not frames:
+        st.info("검토된 거래 입력만으로 차트를 생성할 수 없습니다. 누락값을 추정하지 않습니다.")
+        if missing_inputs:
+            st.caption("확인 필요 · " + " / ".join(missing_inputs))
+        return
+
     left, right = st.columns(2)
     with left:
         with st.container(border=True):
-            st.markdown("**FX 스트레스 · 기준 대비 원화가치**")
-            frame = pd.DataFrame(
-                {"원화가치 지수": [90, 95, 100, 105, 110]},
-                index=["-10%", "-5%", "기준", "+5%", "+10%"],
-            )
-            st.bar_chart(frame, y_label="정규화 지수")
-            st.caption("설명용 정규화 지수입니다. 실제 거래 계산값은 Decision Brief의 계산 ID에서 확인합니다.")
+            st.markdown("**FX 스트레스 · 순노출 가치변화**")
+            stress = frames["stress"]
+            if stress.empty:
+                st.info("검토된 기준환율이 없어 원화 FX 민감도를 표시하지 않습니다.")
+            else:
+                st.bar_chart(
+                    stress.set_index("환율충격(%)")[["추정가치변화(KRW)"]],
+                    y_label="원화 가치변화",
+                )
+                st.caption("검토된 순외환노출에 동일 비율 충격을 적용한 민감도입니다. 환율 예측이나 체결 견적이 아닙니다.")
     with right:
         with st.container(border=True):
-            st.markdown("**자연헤지 후 순노출 구조**")
-            frame = pd.DataFrame(
-                {"금액 지수": [100, -35, -15, 50]},
-                index=["수출채권", "수입채무", "외화예금", "순노출"],
-            )
-            st.bar_chart(frame, y_label="정규화 지수")
-            st.caption("총노출을 그대로 헤지하지 않고 반대 현금흐름과 외화자산을 먼저 차감합니다.")
+            st.markdown("**자연헤지 후 실제 통화별 순노출**")
+            exposure = frames["exposure"]
+            if exposure.empty:
+                st.info("승인된 거래의 통화 노출을 찾지 못했습니다.")
+            else:
+                st.bar_chart(
+                    exposure.set_index("통화")[["수출채권", "수입채무", "외화현금", "순노출"]],
+                    y_label="외화 금액",
+                )
+                st.caption("승인된 거래와 외화현금만 집계합니다. 법적 상계권과 결제시점 일치는 별도 확인 대상입니다.")
     with st.container(border=True):
-        st.markdown("**예상 현금흐름 Timeline**")
-        frame = pd.DataFrame(
-            {"예상잔액 지수": [100, 88, 61, 54, 96]},
-            index=["계약", "선적", "수입대금", "수금대기", "수금"],
-        )
-        st.line_chart(frame, y_label="정규화 지수")
-        st.caption("수금 지연 시 현금공백이 발생하는 구간을 먼저 확인하고 운전자금·채권금융 후보를 연결합니다.")
+        st.markdown("**검토된 월별 예상 기말현금**")
+        liquidity = frames["liquidity"]
+        if liquidity.empty:
+            st.info("결제예정일·기준환율·현금 가정이 충분하지 않아 현금흐름을 표시하지 않습니다.")
+        else:
+            st.line_chart(liquidity.set_index("월")[["기말현금(KRW)"]], y_label="원화 기말현금")
+            st.caption("승인된 거래 일정, 검토된 환율과 명시적 현금·고정비 가정만 사용한 결정론적 시나리오입니다.")
+    if missing_inputs:
+        st.caption("추가 확인 입력 · " + " / ".join(missing_inputs))
 
 
 def render_kb_handoff() -> None:
