@@ -111,7 +111,7 @@ def _render_bottom_nav() -> None:
           <a href="#products" target="_self">금융지원</a>
           <a href="#final-audit" target="_self">근거</a>
         </nav>
-        <!-- Legacy anchor contract retained for direct AI-boundary links: #ai -->
+        <!-- Legacy direct-link contracts retained: #ai #data -->
         """,
         unsafe_allow_html=True,
     )
