@@ -1,0 +1,1 @@
+trigger polished above-fold Streamlit UI audit
