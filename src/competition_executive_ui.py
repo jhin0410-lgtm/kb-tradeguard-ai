@@ -35,13 +35,14 @@ STAGE_LABELS = {
 EXECUTIVE_CSS = """
 <style>
 :root{--kb-yellow:#ffbc00;--tg-blue:#1b63e9;--tg-cyan:#0d95aa;--tg-border:#dce4ef;--tg-muted:#647084}
-.tg-exec-hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.45fr);gap:1rem;padding:1.25rem 1.35rem;border-radius:24px;color:#fff;background:radial-gradient(circle at 88% 8%,rgba(255,188,0,.32),transparent 30%),linear-gradient(126deg,#07172d,#123f78 60%,#0b7285);box-shadow:0 18px 42px rgba(7,23,45,.18)}
-.tg-exec-hero small{font-size:.68rem;letter-spacing:.12em;font-weight:900;opacity:.78}.tg-exec-hero h1{margin:.4rem 0;font-size:1.92rem;line-height:1.16;letter-spacing:-.03em}.tg-exec-hero p{margin:0;max-width:760px;font-size:.88rem;line-height:1.55;opacity:.94}.tg-exec-hero-side{display:grid;gap:.48rem;align-content:center}.tg-exec-hero-chip{border:1px solid rgba(255,255,255,.24);border-radius:13px;padding:.62rem .7rem;background:rgba(255,255,255,.09)}.tg-exec-hero-chip strong{display:block;font-size:.76rem}.tg-exec-hero-chip span{display:block;margin-top:.1rem;font-size:.64rem;line-height:1.35;opacity:.82}
-.tg-stage-shell{border:1px solid var(--tg-border);border-radius:18px;padding:.58rem .72rem;background:#fff;margin:.72rem 0 .85rem;color:#647084;font-size:.74rem}.tg-cockpit{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:.72rem;margin:.65rem 0 .75rem}.tg-decision-card{border:1px solid var(--tg-border);border-left:9px solid var(--tg-blue);border-radius:20px;padding:1rem 1.05rem;background:#fff}.tg-decision-card[data-tone="critical"]{border-left-color:#b52431;background:#fff5f6}.tg-decision-card[data-tone="warning"]{border-left-color:#b76800;background:#fff9ef}.tg-decision-card[data-tone="clear"]{border-left-color:#147455;background:#f2faf7}.tg-decision-card small{font-size:.64rem;font-weight:900;letter-spacing:.1em;color:#758199}.tg-decision-card h2{margin:.3rem 0 .34rem;font-size:1.28rem;color:#172033}.tg-decision-card p{margin:.18rem 0;color:#58667a;font-size:.78rem;line-height:1.48}.tg-cockpit-metrics{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}.tg-cockpit-metric{border:1px solid var(--tg-border);border-radius:15px;padding:.72rem .76rem;background:#fff}.tg-cockpit-metric small{display:block;font-size:.61rem;color:#748198;font-weight:900}.tg-cockpit-metric strong{display:block;margin-top:.18rem;font-size:1.05rem;color:#172033}.tg-cockpit-metric span{display:block;margin-top:.14rem;font-size:.63rem;color:#748198;line-height:1.35}.tg-priority-strip{border:1px solid #ebd08a;border-radius:16px;padding:.78rem .86rem;background:#fff9e8;margin:.62rem 0}.tg-priority-strip strong{font-size:.78rem;color:#533800}.tg-priority-strip span{display:block;margin-top:.22rem;font-size:.72rem;line-height:1.48;color:#74551a}.tg-chart-note{border:1px dashed #9aabc2;border-radius:13px;padding:.64rem .72rem;background:#f8fafc;color:#647084;font-size:.7rem;line-height:1.45}
+.tg-exec-hero{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,.3fr);gap:.9rem;padding:1.14rem 1.28rem;border-radius:22px;color:#fff;background:radial-gradient(circle at 88% 8%,rgba(255,188,0,.32),transparent 30%),linear-gradient(126deg,#07172d,#123f78 60%,#0b7285);box-shadow:0 18px 42px rgba(7,23,45,.18)}
+.tg-exec-hero small{font-size:.67rem;letter-spacing:.12em;font-weight:900;opacity:.78}.tg-exec-hero h1{margin:.38rem 0;font-size:1.68rem;line-height:1.17;letter-spacing:-.03em}.tg-exec-hero p{margin:0;max-width:800px;font-size:.84rem;line-height:1.5;opacity:.94}.tg-exec-hero-side{display:grid;gap:.42rem;align-content:center}.tg-exec-hero-chip{border:1px solid rgba(255,255,255,.24);border-radius:12px;padding:.56rem .64rem;background:rgba(255,255,255,.09)}.tg-exec-hero-chip strong{display:block;font-size:.74rem}.tg-exec-hero-chip span{display:block;margin-top:.08rem;font-size:.62rem;line-height:1.32;opacity:.82}
+.tg-exec-mini{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.75rem .9rem;border:1px solid var(--tg-border);border-left:6px solid var(--kb-yellow);border-radius:16px;background:linear-gradient(120deg,#fff,#f7fbff);box-shadow:0 8px 20px rgba(15,36,68,.04);margin-bottom:.62rem}.tg-exec-mini small{font-size:.62rem;font-weight:900;letter-spacing:.08em;color:#748198}.tg-exec-mini strong{display:block;margin-top:.12rem;font-size:.92rem;color:#172033}.tg-exec-mini span{font-size:.69rem;color:#647084;text-align:right}
+.tg-stage-shell{border:1px solid var(--tg-border);border-radius:18px;padding:.58rem .72rem;background:#fff;margin:.58rem 0 .72rem;color:#647084;font-size:.72rem}.tg-cockpit{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:.72rem;margin:.65rem 0 .75rem}.tg-decision-card{border:1px solid var(--tg-border);border-left:9px solid var(--tg-blue);border-radius:20px;padding:1rem 1.05rem;background:#fff}.tg-decision-card[data-tone="critical"]{border-left-color:#b52431;background:#fff5f6}.tg-decision-card[data-tone="warning"]{border-left-color:#b76800;background:#fff9ef}.tg-decision-card[data-tone="clear"]{border-left-color:#147455;background:#f2faf7}.tg-decision-card small{font-size:.64rem;font-weight:900;letter-spacing:.08em;color:#758199}.tg-decision-card h2{margin:.3rem 0 .34rem;font-size:1.28rem;color:#172033}.tg-decision-card p{margin:.18rem 0;color:#58667a;font-size:.78rem;line-height:1.48}.tg-cockpit-metrics{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}.tg-cockpit-metric{border:1px solid var(--tg-border);border-radius:15px;padding:.72rem .76rem;background:#fff}.tg-cockpit-metric small{display:block;font-size:.61rem;color:#748198;font-weight:900}.tg-cockpit-metric strong{display:block;margin-top:.18rem;font-size:1.05rem;color:#172033}.tg-cockpit-metric span{display:block;margin-top:.14rem;font-size:.63rem;color:#748198;line-height:1.35}.tg-priority-strip{border:1px solid #ebd08a;border-radius:16px;padding:.78rem .86rem;background:#fff9e8;margin:.62rem 0}.tg-priority-strip strong{font-size:.78rem;color:#533800}.tg-priority-strip span{display:block;margin-top:.22rem;font-size:.72rem;line-height:1.48;color:#74551a}.tg-chart-note{border:1px dashed #9aabc2;border-radius:13px;padding:.64rem .72rem;background:#f8fafc;color:#647084;font-size:.7rem;line-height:1.45}
 .tg-product-priority{border:1px solid var(--tg-border);border-top:5px solid var(--tg-cyan);border-radius:18px;padding:.85rem;background:#fff;min-height:220px;box-shadow:0 8px 22px rgba(15,36,68,.05)}.tg-product-priority[data-rank="1"]{border-top-color:var(--kb-yellow)}.tg-product-priority small{font-size:.62rem;font-weight:900;letter-spacing:.07em;color:#748198}.tg-product-priority h3{margin:.34rem 0;font-size:.94rem;color:#172033;line-height:1.35}.tg-product-priority p{margin:.22rem 0;color:#647084;font-size:.73rem;line-height:1.43}.tg-handoff{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(250px,.65fr);gap:.75rem;border:1px solid #e2c05e;border-radius:19px;padding:.9rem;background:linear-gradient(135deg,#fffaf0,#fff)}.tg-handoff h3{margin:.12rem 0 .35rem;font-size:1rem;color:#172033}.tg-handoff p{margin:.22rem 0;color:#647084;font-size:.75rem;line-height:1.48}.tg-handoff-path{display:grid;gap:.36rem}.tg-handoff-step{border:1px solid #ead79c;border-radius:12px;padding:.58rem;background:#fff;font-size:.7rem;color:#5d4a19}
 .tg-impact-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}.tg-impact-card{border:1px solid var(--tg-border);border-radius:16px;padding:.78rem;background:#fff}.tg-impact-card small{font-size:.61rem;font-weight:900;color:#748198}.tg-impact-card h4{margin:.28rem 0;font-size:.86rem;color:#172033}.tg-impact-card p{margin:.18rem 0;color:#647084;font-size:.7rem;line-height:1.44}.tg-api-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:.5rem}.tg-api-card{border:1px solid var(--tg-border);border-radius:14px;padding:.68rem;background:#fff}.tg-api-card strong{display:block;font-size:.74rem;color:#172033}.tg-api-card span{display:block;margin-top:.12rem;font-size:.64rem;color:#647084;line-height:1.4}.tg-api-state{display:inline-block!important;margin-top:.32rem!important;padding:.22rem .42rem;border-radius:999px;background:#eef4f8;font-size:.6rem!important;font-weight:900;color:#31506b}.tg-api-state[data-state="configured"],.tg-api-state[data-state="public"]{background:#edf8f3;color:#147455}.tg-api-state[data-state="missing"]{background:#fff5e8;color:#9a5a00}
 .tg-mobile-stage-nav{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9999;display:flex;gap:.2rem;padding:.3rem;border:1px solid rgba(135,151,175,.55);border-radius:999px;background:rgba(8,19,36,.94);box-shadow:0 10px 30px rgba(0,0,0,.24)}.tg-mobile-stage-nav a{color:#eef4ff;text-decoration:none;font-size:.68rem;font-weight:900;padding:.56rem .7rem;border-radius:999px;white-space:nowrap}.tg-mobile-stage-nav a[data-active="true"]{background:var(--kb-yellow);color:#2b2100}
-@media(max-width:760px){.tg-exec-hero{grid-template-columns:1fr;padding:.92rem;border-radius:18px}.tg-exec-hero h1{font-size:1.42rem}.tg-exec-hero p{font-size:.78rem}.tg-exec-hero-side{grid-template-columns:1fr}.tg-exec-hero-chip{padding:.48rem .56rem}.tg-exec-hero-chip span{font-size:.68rem}.tg-cockpit{grid-template-columns:1fr}.tg-cockpit-metrics{grid-template-columns:1fr 1fr}.tg-product-priority{min-height:auto}.tg-handoff{grid-template-columns:1fr}.tg-impact-grid{grid-template-columns:1fr}.tg-mobile-stage-nav{width:calc(100% - .8rem);justify-content:space-around}.tg-mobile-stage-nav a{padding:.54rem .48rem;font-size:.63rem}}
+@media(max-width:760px){.tg-exec-hero{grid-template-columns:1fr;padding:.72rem .78rem;border-radius:16px;gap:.48rem}.tg-exec-hero small{font-size:.58rem}.tg-exec-hero h1{font-size:1.19rem;line-height:1.2;margin:.27rem 0}.tg-exec-hero p{font-size:.7rem;line-height:1.4}.tg-exec-hero-side{grid-template-columns:repeat(3,1fr);gap:.28rem}.tg-exec-hero-chip{padding:.38rem .3rem;text-align:center}.tg-exec-hero-chip strong{font-size:.64rem}.tg-exec-hero-chip span{display:none}.tg-exec-mini{padding:.58rem .65rem}.tg-exec-mini strong{font-size:.8rem}.tg-exec-mini span{display:none}.tg-cockpit{grid-template-columns:1fr}.tg-cockpit-metrics{grid-template-columns:1fr 1fr}.tg-cockpit-metric{padding:.62rem}.tg-cockpit-metric strong{font-size:.92rem}.tg-product-priority{min-height:auto}.tg-handoff{grid-template-columns:1fr}.tg-impact-grid{grid-template-columns:1fr}.tg-mobile-stage-nav{width:calc(100% - .8rem);justify-content:space-around}.tg-mobile-stage-nav a{padding:.54rem .48rem;font-size:.63rem}}
 </style>
 """
 
@@ -84,16 +85,39 @@ def _format_krw(value: Decimal | None, *, signed: bool = False) -> str:
     return f"{prefix}{value:,.0f}원"
 
 
+def _first_value(record: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        value = record.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
 def _transaction_label(run) -> str:
     transactions = list(getattr(run.updated_case, "approved_transactions", []) or [])
     transaction = transactions[0] if transactions and isinstance(transactions[0], dict) else {}
-    direction = str(transaction.get("transaction_type") or "거래").strip().lower()
+    direction = str(_first_value(transaction, "transaction_type", "direction") or "거래").strip().lower()
     direction_label = {"export": "수출", "import": "수입"}.get(direction, direction or "거래")
-    country = str(transaction.get("country_code") or transaction.get("destination_country") or transaction.get("origin_country") or "거래국").upper()
-    currency = str(transaction.get("currency") or "").upper()
-    amount = _as_decimal(transaction.get("amount"))
+    country = str(
+        _first_value(
+            transaction,
+            "country_code",
+            "buyer_country",
+            "seller_country",
+            "counterparty_country",
+            "trade_country",
+            "destination_country",
+            "origin_country",
+        )
+        or "거래국 확인"
+    ).upper()
+    currency = str(_first_value(transaction, "currency", "settlement_currency") or "").upper()
+    amount = _as_decimal(
+        _first_value(transaction, "amount", "amount_fc", "transaction_amount", "invoice_amount")
+    )
     amount_text = f"{amount:,.0f}" if amount is not None else "금액 확인"
-    return " · ".join(item for item in (country, direction_label, f"{currency} {amount_text}".strip()) if item)
+    amount_label = f"{currency} {amount_text}".strip()
+    return " · ".join(item for item in (country, direction_label, amount_label) if item)
 
 
 def resolve_active_portfolio() -> tuple[Any, PortfolioAssessment]:
@@ -134,10 +158,23 @@ def build_executive_model(run, assessment: PortfolioAssessment) -> ExecutiveMode
 
 
 def render_executive_hero() -> None:
-    st.markdown(EXECUTIVE_CSS, unsafe_allow_html=True)
     st.markdown("""
-    <section class="tg-exec-hero"><div><small>KB TRADEGUARD AI · 거래 의사결정 COCKPIT</small><h1>거래 확정 전에 위험, 현금 공백, 금융 행동을 한 화면에서 확인합니다</h1><p>여러 수출입 거래와 공식데이터를 연결해 무엇이 위험한지, 어떤 시나리오가 손익과 유동성에 영향을 주는지, 어느 상담을 먼저 준비해야 하는지 근거 ID와 함께 제시합니다.</p></div><div class="tg-exec-hero-side"><div class="tg-exec-hero-chip"><strong>판정</strong><span>진행 전 보완조건과 상위 위험</span></div><div class="tg-exec-hero-chip"><strong>시나리오</strong><span>FX·현금흐름·자연헤지 변화</span></div><div class="tg-exec-hero-chip"><strong>금융지원</strong><span>우선 상담 3개와 준비자료</span></div></div></section><div class="tg-boundary">공개 합성 거래를 사용하는 상담 준비용 프로토타입입니다. 은행 승인, 체결환율, 금리·한도, 상품 적격성, 보험 인수, 법률·제재 판단을 확정하지 않습니다.</div>
+    <section class="tg-exec-hero"><div><small>KB TRADEGUARD AI · 거래 의사결정 COCKPIT</small><h1>거래 확정 전, 위험·현금 공백·금융 행동을 한 화면에서 확인합니다</h1><p>여러 수출입 거래와 공식데이터를 연결해 무엇이 위험한지, 어떤 시나리오가 손익과 유동성에 영향을 주는지, 어느 상담을 먼저 준비해야 하는지 근거 ID와 함께 제시합니다.</p></div><div class="tg-exec-hero-side"><div class="tg-exec-hero-chip"><strong>판정</strong><span>진행 전 보완조건과 상위 위험</span></div><div class="tg-exec-hero-chip"><strong>시나리오</strong><span>FX·현금흐름·자연헤지 변화</span></div><div class="tg-exec-hero-chip"><strong>금융지원</strong><span>우선 상담 3개와 준비자료</span></div></div></section><div class="tg-boundary">공개 합성 거래를 사용하는 상담 준비용 프로토타입입니다. 은행 승인, 체결환율, 금리·한도, 상품 적격성, 보험 인수, 법률·제재 판단을 확정하지 않습니다.</div>
     """, unsafe_allow_html=True)
+
+
+def render_compact_stage_header(stage: str) -> None:
+    label = STAGE_LABELS.get(stage, STAGE_LABELS["decision"])
+    descriptions = {
+        "decision": "거래 판정과 최우선 행동",
+        "scenarios": "FX·현금흐름·자연헤지 변화",
+        "support": "우선 상담 후보와 준비자료",
+        "evidence": "공식데이터·AI 경계·감사 근거",
+    }
+    st.markdown(
+        f'<section class="tg-exec-mini"><div><small>KB TRADEGUARD AI · GUIDED REVIEW</small><strong>{escape(label)}</strong></div><span>{escape(descriptions.get(stage, descriptions["decision"]))}</span></section>',
+        unsafe_allow_html=True,
+    )
 
 
 def _query_value(name: str, default: str) -> str:
