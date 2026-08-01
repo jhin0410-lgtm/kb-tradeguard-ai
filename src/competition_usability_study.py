@@ -14,7 +14,7 @@ from typing import Any
 
 import streamlit as st
 
-from .assessment_app_v2 import build_risk_first_summary
+from .assessment_app_v2 import RiskFirstSummary, build_risk_first_summary
 
 
 @dataclass(frozen=True)
@@ -71,6 +71,22 @@ def evaluate_usability_response(
     )
 
 
+def build_neutral_study_options(
+    summary: RiskFirstSummary,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Return alphabetized, unranked labels so the UI does not reveal the answers."""
+
+    risk_options = {
+        item.title: item.concern_id
+        for item in sorted(summary.top_risks, key=lambda item: (item.title, item.concern_id))
+    }
+    action_options = {
+        item.title: item.action_id
+        for item in sorted(summary.next_actions, key=lambda item: (item.title, item.action_id))
+    }
+    return risk_options, action_options
+
+
 def study_mode_enabled() -> bool:
     value = st.query_params.get("study", "")
     if isinstance(value, list):
@@ -88,8 +104,7 @@ def render_usability_study(run) -> None:
         st.warning("사용성 과제를 구성할 위험 또는 실행 행동이 없습니다.")
         return
 
-    risk_options = {f"{item.rank}. {item.title}": item.concern_id for item in summary.top_risks}
-    action_options = {f"{item.sequence}. {item.title}": item.action_id for item in summary.next_actions}
+    risk_options, action_options = build_neutral_study_options(summary)
     expected_risk = summary.top_risks[0].concern_id
     expected_action = summary.next_actions[0].action_id
 
@@ -97,7 +112,7 @@ def render_usability_study(run) -> None:
         st.markdown("### 사용성 검증 모드")
         st.caption(
             "과제: 이 거래에서 가장 먼저 볼 위험과 첫 번째 실행 행동을 찾으세요. "
-            "이 모드는 이름·연락처·실제 고객자료를 수집하지 않습니다."
+            "선택지는 우선순위를 숨긴 중립 순서이며, 이름·연락처·실제 고객자료는 수집하지 않습니다."
         )
         participant_code = st.text_input(
             "참가자 코드(선택)",
@@ -108,18 +123,37 @@ def render_usability_study(run) -> None:
         if "usability_started_at" not in st.session_state:
             if st.button("과제 시작", use_container_width=True, key="usability_start"):
                 st.session_state["usability_started_at"] = time.monotonic()
+                st.session_state.pop("usability_result", None)
                 st.rerun()
             return
 
-        risk_label = st.selectbox("가장 먼저 볼 위험", list(risk_options), key="usability_risk")
-        action_label = st.selectbox("첫 번째 실행 행동", list(action_options), key="usability_action")
-        if st.button("과제 완료", use_container_width=True, key="usability_complete"):
+        risk_label = st.selectbox(
+            "가장 먼저 볼 위험",
+            list(risk_options),
+            index=None,
+            placeholder="위험을 선택하세요",
+            key="usability_risk",
+        )
+        action_label = st.selectbox(
+            "첫 번째 실행 행동",
+            list(action_options),
+            index=None,
+            placeholder="행동을 선택하세요",
+            key="usability_action",
+        )
+        selections_complete = risk_label is not None and action_label is not None
+        if st.button(
+            "과제 완료",
+            use_container_width=True,
+            key="usability_complete",
+            disabled=not selections_complete,
+        ):
             elapsed = time.monotonic() - float(st.session_state["usability_started_at"])
             result = evaluate_usability_response(
                 participant_code=participant_code,
                 elapsed_seconds=elapsed,
-                selected_risk_id=risk_options[risk_label],
-                selected_action_id=action_options[action_label],
+                selected_risk_id=risk_options[str(risk_label)],
+                selected_action_id=action_options[str(action_label)],
                 expected_risk_id=expected_risk,
                 expected_action_id=expected_action,
             )
