@@ -96,7 +96,7 @@ def test_canonical_entrypoint_uses_guided_decision_cockpit_order():
 
     hero = source.index("render_executive_hero()")
     selector = source.index("active_stage = render_stage_selector()")
-    decision = source.index("model = _render_decision_stage(run, assessment, presentation_mode=True)")
+    decision = source.index("model = _render_decision_stage(\n            run,")
     scenarios = source.index("_render_scenario_stage(assessment, presentation_mode=True)")
     support = source.index("render_financial_support(run, model, presentation_mode=True)")
     evidence = source.index("_render_evidence_stage(run, scenario_id, presentation_mode=True)")
@@ -104,3 +104,5 @@ def test_canonical_entrypoint_uses_guided_decision_cockpit_order():
     assert hero < selector
     assert decision < scenarios < support < evidence
     assert "render_mobile_stage_nav" in source
+    assert "단일 거래 Fixture" in source
+    assert "별도 다중 거래 포트폴리오" in source
