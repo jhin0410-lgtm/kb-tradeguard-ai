@@ -14,8 +14,10 @@ from src.competition_case_study_view import render_official_case_study_section
 from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_executive_ui import (
     EXECUTIVE_CSS,
+    STAGE_LABELS,
     build_executive_model,
     render_api_status_matrix,
+    render_compact_stage_header,
     render_data_decision_impact,
     render_decision_cockpit,
     render_executive_hero,
@@ -76,6 +78,14 @@ def _ensure_topic6_run(scenario_id: str):
     st.session_state["competition_package"] = package
     st.session_state["competition_scenario_id"] = scenario_id
     return run
+
+
+def _requested_stage() -> str:
+    value = st.query_params.get("stage", "decision")
+    if isinstance(value, list):
+        value = value[0] if value else "decision"
+    stage = str(value)
+    return stage if stage in STAGE_LABELS else "decision"
 
 
 def _render_internal_benchmark() -> None:
@@ -170,14 +180,24 @@ def _render_competition_page() -> None:
         unsafe_allow_html=True,
     )
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
-    render_executive_hero()
-    if not presentation_mode:
-        with st.expander("전체 6단계 처리 흐름", expanded=False):
-            render_workflow_map()
+
+    active_stage = "decision"
+    if presentation_mode:
+        render_executive_hero()
+    else:
+        requested_stage = _requested_stage()
+        if requested_stage == "decision":
+            render_executive_hero()
+        else:
+            render_compact_stage_header(requested_stage)
+        active_stage = render_stage_selector()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
-        scenario_id = app._render_scenario_control(scenario_id)
+        with st.expander("데모 설정·전체 6단계 처리 흐름", expanded=False):
+            scenario_id = app._render_scenario_control(scenario_id)
+            render_workflow_map()
+
     run = _ensure_topic6_run(scenario_id)
     portfolio_case, assessment = resolve_active_portfolio()
     portfolio_label = portfolio_case.identity.company_name or portfolio_case.identity.case_id
@@ -199,7 +219,6 @@ def _render_competition_page() -> None:
         render_financial_support(run, model, presentation_mode=True)
         _render_evidence_stage(run, scenario_id, presentation_mode=True)
     else:
-        active_stage = render_stage_selector()
         if active_stage == "decision":
             _render_decision_stage(
                 run,
