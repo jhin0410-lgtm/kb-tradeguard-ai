@@ -14,7 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,3 +57,14 @@ jobs:
           retention-days: 7
       - run: python -m compileall -q app.py copilot_app.py assessment_app.py assessment_app_v2.py assessment_app_v2_mobile.py competition_app.py streamlit_app.py pages src tests scripts
       - run: python -c "import app; import copilot_app; import assessment_app; import assessment_app_v2; import assessment_app_v2_mobile; import competition_app; import streamlit_app; import src"
+      - name: Build clean submission source package
+        run: python scripts/build_submission_package.py --output dist/KB-TradeGuard-AI-prototype.zip
+      - name: Verify extracted submission runtime
+        run: python scripts/verify_submission_package.py dist/KB-TradeGuard-AI-prototype.zip --start-app --timeout-seconds 60
+      - name: Upload verified submission package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kb-tradeguard-submission-package
+          path: dist/KB-TradeGuard-AI-prototype.zip
+          if-no-files-found: error
+          retention-days: 14

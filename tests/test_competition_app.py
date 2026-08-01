@@ -45,16 +45,18 @@ def test_streamlit_entrypoint_exposes_title_as_the_legacy_scenario_label():
     assert all(item.label == item.title for item in scenarios)
 
 
-def test_streamlit_entrypoint_isolates_legacy_pages_and_surfaces_topic_six_capabilities():
+def test_streamlit_entrypoint_isolates_public_uploads_and_connects_topic_six_modes():
     source = Path(streamlit_app.__file__).read_text(encoding="utf-8")
 
-    assert "st.navigation([page], position=\"hidden\")" in source
+    assert "_available_modes" in source
+    assert "_private_workspace_enabled" in source
+    assert "TRADEGUARD_ENABLE_PRIVATE_WORKSPACE" in source
+    assert 'modes = ["decision", "portfolio", "evidence"]' in source
+    assert 'modes.insert(1, "analyst")' in source
     assert "render_ai_boundary_section" in source
     assert "render_product_consultation_section" in source
     assert "render_official_data_section" in source
     assert "build_internal_trade_document_benchmark" in source
-    assert "#ai" in source
-    assert "#products" in source
-    assert "#data" in source
-    assert "pages/" in source
+    assert "render_portfolio_section(presentation_mode=False, case=run.updated_case)" in source
+    assert "detailed._render_results" in source
     assert "render_grounded_live_ai_panel" not in source
