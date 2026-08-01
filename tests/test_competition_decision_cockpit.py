@@ -1,5 +1,10 @@
 from pathlib import Path
 
+import src.competition_decision_cockpit as cockpit
+from src.competition_topic6 import prepare_topic6_demo_package
+from src.demo_scenarios import load_demo_scenario
+from src.intelligence.single_transaction_package import run_single_transaction_package
+
 
 def test_decision_cockpit_module_contains_required_ui_contracts() -> None:
     text = Path("src/competition_decision_cockpit.py").read_text(encoding="utf-8")
@@ -13,9 +18,35 @@ def test_decision_cockpit_module_contains_required_ui_contracts() -> None:
         "FX 스트레스",
         "자연헤지 후 순노출",
         "예상 현금흐름 Timeline",
+        "run.updated_case",
+        "run.assessment_result.brief",
+        "st.container(border=True)",
     ]
     for marker in required:
         assert marker in text
+
+
+def test_cockpit_renders_governed_package_run(monkeypatch) -> None:
+    run = run_single_transaction_package(
+        prepare_topic6_demo_package(load_demo_scenario("oa_high_risk"))
+    )
+    rendered: list[str] = []
+    monkeypatch.setattr(
+        cockpit.st,
+        "markdown",
+        lambda body, **kwargs: rendered.append(str(body)),
+    )
+
+    cockpit.render_decision_cockpit(run, "oa_high_risk")
+
+    html = "\n".join(rendered)
+    transaction = run.updated_case.approved_transactions[0]
+    brief = run.assessment_result.brief
+    assert str(transaction["currency"]) in html
+    assert f'{float(transaction["amount_fc"]):,.0f}' in html
+    assert cockpit._DISPOSITION_LABELS[brief.disposition] in html
+    assert brief.action_plan[0].title in html
+    assert "₩" not in html
 
 
 def test_canonical_entrypoint_uses_four_step_guided_flow() -> None:
@@ -32,6 +63,8 @@ def test_canonical_entrypoint_uses_four_step_guided_flow() -> None:
     assert positions == sorted(positions)
     for label in ("판정", "시나리오", "금융지원", "근거"):
         assert label in text
+    assert 'id="final-audit"' in text
+    assert 'href="#final-audit"' in text
 
 
 def test_mobile_cockpit_contract_is_present() -> None:
