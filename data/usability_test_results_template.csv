@@ -1,0 +1,6 @@
+participant_id,participant_profile,test_date,device,total_completion_seconds,decision_found_seconds,risk_accuracy_0_to_3,action_accuracy_0_to_3,product_understanding_1_to_5,data_boundary_understanding_1_to_5,difficult_terms,redundant_sections,consultation_intent_1_to_5,notes
+P01,,,,,,,,,,,,,
+P02,,,,,,,,,,,,,
+P03,,,,,,,,,,,,,
+P04,,,,,,,,,,,,,
+P05,,,,,,,,,,,,,
