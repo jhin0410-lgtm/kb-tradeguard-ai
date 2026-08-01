@@ -19,7 +19,7 @@ COCKPIT_CSS = """
 .tg-cockpit-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:.8rem}.tg-cockpit-kicker{font-size:.67rem;letter-spacing:.1em;font-weight:900;color:#6d7b91}.tg-cockpit-title{font-size:1.32rem;font-weight:900;color:#172033;margin:.22rem 0}.tg-cockpit-sub{font-size:.78rem;color:#647084;line-height:1.45}.tg-decision-pill{padding:.48rem .7rem;border-radius:999px;background:#fff1cc;color:#6b4b00;font-size:.72rem;font-weight:900;border:1px solid #f0d37a;white-space:nowrap}
 .tg-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem}.tg-kpi{border:1px solid #dce4ef;border-radius:15px;padding:.72rem;background:#fff}.tg-kpi span{display:block;font-size:.64rem;color:#748198;font-weight:800}.tg-kpi strong{display:block;margin-top:.22rem;font-size:1rem;color:#172033}
 .tg-next-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem;margin-top:.65rem}.tg-next{border-radius:14px;padding:.72rem;background:#07172d;color:#fff;min-height:92px}.tg-next b{display:block;font-size:.78rem;margin-bottom:.25rem}.tg-next span{font-size:.68rem;opacity:.82;line-height:1.4}.tg-next small{display:block;margin-top:.35rem;font-size:.59rem;opacity:.68}
-.tg-guide{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;margin:.8rem 0}.tg-guide a{display:block;text-decoration:none;border:1px solid #dce4ef;border-radius:14px;padding:.7rem;background:#fff;color:#172033;font-size:.72rem;font-weight:900;text-align:center}.tg-guide a:hover{border-color:#1b63e9;background:#f3f7ff}
+.tg-guide{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;margin:.8rem 0}.tg-guide a{display:block;text-decoration:none;border:1px solid #dce4ef;border-radius:14px;padding:.7rem;background:#fff;color:#172033;font-size:.72rem;font-weight:900;text-align:center}.tg-guide a:hover{border-color:#1b63e9;background:#f3f7ff}
 .tg-handoff{border:1px solid #ead89b;background:#fff9df;border-radius:18px;padding:.95rem;margin:.75rem 0}.tg-handoff strong{color:#4f3c00}.tg-handoff p{font-size:.74rem;color:#655b3b;margin:.3rem 0 0;line-height:1.48}.tg-handoff-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;margin-top:.65rem}.tg-handoff-item{border:1px solid rgba(125,94,0,.18);border-radius:12px;padding:.62rem;background:rgba(255,255,255,.62)}.tg-handoff-item small{display:block;font-size:.58rem;font-weight:900;color:#806600}.tg-handoff-item span{display:block;font-size:.68rem;color:#4f4a38;margin-top:.12rem;line-height:1.35}
 @media(max-width:760px){.tg-cockpit-head{display:block}.tg-decision-pill{display:inline-block;margin-top:.55rem}.tg-kpi-grid{grid-template-columns:1fr 1fr}.tg-next-grid,.tg-handoff-grid{grid-template-columns:1fr}.tg-guide{grid-template-columns:1fr 1fr}.tg-cockpit-title{font-size:1.08rem}.tg-kpi strong{font-size:.88rem}}
 </style>
@@ -69,7 +69,7 @@ def _evidence_count(brief: Any) -> int:
 
 def render_guided_nav() -> None:
     st.markdown(
-        """<div class="tg-guide"><a href="#summary" target="_self">1 · 거래 판정</a><a href="#scenarios" target="_self">2 · 위험 시나리오</a><a href="#products" target="_self">3 · 금융지원</a><a href="#final-audit" target="_self">4 · 근거·감사</a></div>""",
+        """<div class="tg-guide"><a href="#summary" target="_self">1 · 거래 판정</a><a href="#evidence" target="_self">2 · 위험 근거</a><a href="#scenarios" target="_self">3 · FX·유동성</a><a href="#products" target="_self">4 · 금융지원</a><a href="#final-audit" target="_self">5 · 감사</a></div>""",
         unsafe_allow_html=True,
     )
 
@@ -121,7 +121,7 @@ def build_decision_chart_frames(run: Any) -> tuple[dict[str, pd.DataFrame], list
 
 def render_decision_charts(run: Any) -> None:
     st.markdown('<div id="scenarios" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">02 · 실제 위험 시나리오와 현금흐름</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">03 · FX·유동성 위험 시나리오</div>', unsafe_allow_html=True)
     frames, missing_inputs = build_decision_chart_frames(run)
     if not frames:
         st.info("검토된 거래 입력만으로 차트를 생성할 수 없습니다. 누락값을 추정하지 않습니다.")
