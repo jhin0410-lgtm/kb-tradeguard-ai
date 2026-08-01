@@ -20,7 +20,6 @@ from src.competition_evaluation import build_internal_trade_document_benchmark
 from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
 from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
-from src.competition_top_products import render_top_product_candidates
 from src.competition_topic6 import prepare_topic6_demo_package
 from src.demo_scenarios import DemoScenarioMetadata
 
@@ -67,6 +66,16 @@ def _render_internal_benchmark() -> None:
     st.caption(
         "프로젝트가 작성하고 사람이 검토한 구조화 합성 Fixture에 대한 회귀 결과입니다. "
         "외부 원문 문서 정확도, 법률 검토 일치율, 신용성과 또는 운영 적합성을 뜻하지 않습니다."
+    )
+
+
+def _render_presentation_evidence(run) -> None:
+    st.markdown('<div id="final-audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">04 · 근거·검증</div>', unsafe_allow_html=True)
+    app._render_validation_status()
+    st.caption(
+        f"입력 Package hash {run.input_package_hash[:16]}… · 출력 Case hash {run.output_case_hash[:16]}… · "
+        "Hash는 변경 추적 식별자이며 승인·법률·금융 적합성 인증이 아닙니다."
     )
 
 
@@ -141,16 +150,19 @@ def _render_competition_page() -> None:
     app._render_verdict(run)
     app._render_risks(run, presentation_mode=presentation_mode)
     app._render_actions(run, presentation_mode=presentation_mode)
-    render_decision_charts()
-    render_portfolio_section(presentation_mode=presentation_mode)
-    render_ai_boundary_section(presentation_mode=presentation_mode)
-    render_top_product_candidates(scenario_id)
+    render_decision_charts(run)
     render_product_consultation_section(run, presentation_mode=presentation_mode)
     render_kb_handoff()
-    render_official_case_study_section(presentation_mode=presentation_mode)
-    render_official_data_section(presentation_mode=presentation_mode)
-    if not presentation_mode:
+
+    if presentation_mode:
+        _render_presentation_evidence(run)
+    else:
         _render_audit(run, scenario_id)
+        with st.expander("상세 분석·공식 데이터·AI 구조", expanded=False):
+            render_portfolio_section(presentation_mode=False)
+            render_ai_boundary_section(presentation_mode=False)
+            render_official_case_study_section(presentation_mode=False)
+            render_official_data_section(presentation_mode=False)
         _render_bottom_nav()
     st.markdown("</div>", unsafe_allow_html=True)
 
