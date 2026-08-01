@@ -139,7 +139,7 @@ def render_product_consultation_section(run, *, presentation_mode: bool) -> None
     cards = build_product_consultation_cards(run, limit=3)
     st.markdown(PRODUCT_VIEW_CSS, unsafe_allow_html=True)
     st.markdown('<div id="products" class="tg-section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="tg-section-title">03 · 금융지원·다음 행동</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tg-section-title">04 · 금융지원·다음 행동</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="tg-product-boundary"><strong>추천의 의미</strong> · 현재 거래의 확인된 목적과 조건을 공개 상품정보에 연결한 상위 상담 후보입니다. 시나리오별 고정 목록이 아니며 적격성·승인·금리·한도·보험 인수·환헤지 적합성을 확정하지 않습니다.</div>',
         unsafe_allow_html=True,
