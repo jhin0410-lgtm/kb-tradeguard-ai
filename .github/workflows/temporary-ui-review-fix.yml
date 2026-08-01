@@ -3,7 +3,7 @@ name: temporary-ui-review-fix
 on:
   pull_request:
     branches:
-      - automation/ui-review-fix-base
+      - automation/ui-review-fix-base-v2
 
 permissions:
   contents: write
@@ -26,7 +26,7 @@ jobs:
       - name: Apply reviewed UI fixes
         run: python .internal/apply_ui_review_fixes.py
       - name: Run focused review regression tests
-        run: python -m pytest -q tests/test_competition_executive_ui.py tests/test_competition_usability_study.py tests/test_competition_app.py tests/test_streamlit_entrypoint.py
+        run: python -m pytest -q tests/test_competition_executive_ui.py tests/test_competition_usability_study.py tests/test_competition_app.py
       - name: Run full regression suite
         run: python -m pytest -q
       - name: Compile and import applications
