@@ -112,6 +112,7 @@ def _render_bottom_nav() -> None:
           <a href="#final-audit" target="_self">근거</a>
         </nav>
         <!-- Legacy direct-link contracts retained: #ai #data -->
+        <!-- Public competition navigation intentionally excludes legacy pages/ routes. -->
         """,
         unsafe_allow_html=True,
     )
