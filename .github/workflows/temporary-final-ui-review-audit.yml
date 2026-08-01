@@ -1,0 +1,136 @@
+name: temporary-final-ui-review-audit
+
+on:
+  pull_request:
+    branches:
+      - automation/final-ui-review-audit-base
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -r requirements.txt playwright
+      - run: python -m playwright install chromium
+      - name: Run final local Streamlit UI audit
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ui-audit | Out-Null
+          @'
+          import json
+          import subprocess
+          import sys
+          import time
+          import urllib.request
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          base = "http://127.0.0.1:8501/"
+          output = Path("ui-audit")
+          output.mkdir(exist_ok=True)
+          cases = [
+              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "상위 위험", "우선 행동", "상담 후보", "별도 다중 거래 포트폴리오"], 0, False),
+              ("scenarios-desktop", "?stage=scenarios", {"width": 1440, "height": 1000}, ["손익·유동성·자연헤지 시나리오"], 3, False),
+              ("support-desktop", "?stage=support", {"width": 1440, "height": 1000}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1", "상담 준비 패키지"], 0, False),
+              ("evidence-desktop", "?stage=evidence", {"width": 1440, "height": 1000}, ["공식데이터가 판단에 미치는 영향", "공식 API 연결 상태"], 0, False),
+              ("decision-mobile", "?stage=decision", {"width": 390, "height": 844}, ["거래 의사결정 Cockpit", "상위 위험", "우선 행동"], 0, True),
+              ("scenarios-mobile", "?stage=scenarios", {"width": 390, "height": 844}, ["손익·유동성·자연헤지 시나리오"], 3, True),
+          ]
+
+          stdout = (output / "streamlit-out.log").open("w", encoding="utf-8")
+          stderr = (output / "streamlit-err.log").open("w", encoding="utf-8")
+          process = subprocess.Popen(
+              [sys.executable, "-m", "streamlit", "run", "streamlit_app.py", "--server.headless", "true", "--server.port", "8501", "--browser.gatherUsageStats", "false"],
+              stdout=stdout,
+              stderr=stderr,
+          )
+          results = []
+          try:
+              deadline = time.time() + 120
+              while time.time() < deadline:
+                  if process.poll() is not None:
+                      raise RuntimeError(f"Streamlit exited with code {process.returncode}")
+                  try:
+                      with urllib.request.urlopen(base + "_stcore/health", timeout=3) as response:
+                          if response.status == 200:
+                              break
+                  except Exception:
+                      time.sleep(2)
+              else:
+                  raise RuntimeError("Streamlit did not become healthy")
+
+              with sync_playwright() as p:
+                  browser = p.chromium.launch(headless=True)
+                  for name, suffix, viewport, required, min_charts, mobile in cases:
+                      page = browser.new_page(viewport=viewport)
+                      page.goto(base + suffix, wait_until="domcontentloaded", timeout=120_000)
+                      page.get_by_text("KB TRADEGUARD AI", exact=False).first.wait_for(timeout=120_000)
+                      page.wait_for_timeout(3000)
+                      body = page.locator("body").inner_text()
+                      missing = [text for text in required if text not in body]
+                      chart_count = page.locator(".js-plotly-plot").count()
+                      geometry = page.evaluate("() => ({scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, overflow: document.documentElement.scrollWidth > window.innerWidth + 4})")
+                      nav_count = page.locator(".tg-mobile-stage-nav").count()
+                      if missing:
+                          raise AssertionError(f"{name}: missing {missing}")
+                      if chart_count < min_charts:
+                          raise AssertionError(f"{name}: expected {min_charts} charts, got {chart_count}")
+                      if geometry["overflow"]:
+                          raise AssertionError(f"{name}: horizontal overflow {geometry}")
+                      if mobile and nav_count != 1:
+                          raise AssertionError(f"{name}: mobile nav count {nav_count}")
+                      page.screenshot(path=str(output / f"{name}.png"), full_page=True)
+                      results.append({"name": name, "status": "passed", "chart_count": chart_count, "mobile_nav_count": nav_count, "geometry": geometry})
+                      page.close()
+
+                  study = browser.new_page(viewport={"width": 390, "height": 844})
+                  study.goto(base + "?stage=decision&study=true", wait_until="domcontentloaded", timeout=120_000)
+                  study.get_by_role("button", name="과제 시작").wait_for(timeout=120_000)
+                  study.get_by_role("button", name="과제 시작").click()
+                  study.get_by_text("위험을 선택하세요", exact=False).wait_for(timeout=120_000)
+                  study.get_by_text("행동을 선택하세요", exact=False).wait_for(timeout=120_000)
+                  body = study.locator("body").inner_text()
+                  if "1. " in body or "2. " in body or "3. " in body:
+                      raise AssertionError("Study mode leaked ranked labels")
+                  complete = study.get_by_role("button", name="과제 완료")
+                  if not complete.is_disabled():
+                      raise AssertionError("Study completion was enabled before explicit selections")
+                  links = study.locator('.tg-mobile-stage-nav a')
+                  for index in range(links.count()):
+                      href = links.nth(index).get_attribute("href") or ""
+                      if "study=true" not in href:
+                          raise AssertionError(f"Study query missing from mobile link: {href}")
+                  study.screenshot(path=str(output / "study-mobile.png"), full_page=True)
+                  results.append({"name": "study-mobile", "status": "passed", "completion_disabled": True, "rank_labels_hidden": True, "study_links_preserved": True})
+                  study.close()
+                  browser.close()
+
+              (output / "ui-audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+          finally:
+              process.terminate()
+              try:
+                  process.wait(timeout=10)
+              except subprocess.TimeoutExpired:
+                  process.kill()
+              stdout.close()
+              stderr.close()
+          '@ | Set-Content -Encoding UTF8 ui-audit/run_final_ui_audit.py
+          python ui-audit/run_final_ui_audit.py
+      - name: Upload final UI audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-decision-cockpit-ui-audit
+          path: ui-audit/
+          if-no-files-found: warn
+          retention-days: 14
