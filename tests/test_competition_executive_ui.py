@@ -1,0 +1,101 @@
+from pathlib import Path
+
+from src.competition_executive_ui import (
+    STAGE_LABELS,
+    build_executive_model,
+    build_exposure_waterfall,
+    build_fx_stress_figure,
+    build_handoff_payload,
+    build_liquidity_figure,
+    provider_configuration_status,
+)
+from src.competition_topic6 import prepare_topic6_demo_package
+from src.demo_scenarios import load_demo_scenario
+from src.intelligence.portfolio_assessment import analyze_trade_portfolio
+from src.intelligence.single_transaction_package import run_single_transaction_package
+from src.portfolio_demo import build_demo_company_workspace
+
+
+def _run_and_assessment():
+    package = prepare_topic6_demo_package(load_demo_scenario("oa_high_risk"))
+    run = run_single_transaction_package(package)
+    assessment = analyze_trade_portfolio(build_demo_company_workspace().active_case)
+    return run, assessment
+
+
+def test_executive_model_prioritizes_three_or_fewer_consultation_candidates():
+    run, assessment = _run_and_assessment()
+    model = build_executive_model(run, assessment)
+
+    assert model.transaction_label
+    assert model.disposition_headline
+    assert model.top_risk_title
+    assert len(model.product_cards) <= 3
+    assert model.missing_information_count >= 0
+
+
+def test_financial_story_figures_are_populated_from_governed_portfolio_outputs():
+    _, assessment = _run_and_assessment()
+
+    stress = build_fx_stress_figure(assessment)
+    liquidity = build_liquidity_figure(assessment)
+    exposure = build_exposure_waterfall(assessment)
+
+    assert stress.data
+    assert liquidity.data
+    assert exposure.data
+    assert "환율" in stress.layout.title.text
+    assert "기말현금" in liquidity.layout.title.text
+    assert "노출" in exposure.layout.title.text
+
+
+def test_consultation_handoff_preserves_boundary_and_references():
+    run, assessment = _run_and_assessment()
+    model = build_executive_model(run, assessment)
+    payload = build_handoff_payload(run, model)
+
+    assert payload["schema_version"] == "kb-tradeguard-consultation-handoff/1.0"
+    assert payload["top_risks"]
+    assert payload["priority_actions"]
+    assert len(payload["consultation_candidates"]) <= 3
+    assert "No approval" in payload["authority_boundary"]
+    combined = str(payload)
+    assert "승인 확정" not in combined
+    assert "확정 금리" not in combined
+
+
+def test_guided_ui_has_exactly_four_customer_facing_stages():
+    assert list(STAGE_LABELS) == ["decision", "scenarios", "support", "evidence"]
+    assert list(STAGE_LABELS.values()) == ["1 · 판정", "2 · 시나리오", "3 · 금융지원", "4 · 근거"]
+
+
+def test_official_api_status_matrix_is_explicit_about_public_and_secret_paths(monkeypatch):
+    for name in (
+        "KEXIM_API_KEY",
+        "KCS_TRADE_API_KEY",
+        "DATA_GO_KR_SERVICE_KEY",
+        "BOK_ECOS_API_KEY",
+        "OPENDART_API_KEY",
+        "NTS_BUSINESS_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    rows = provider_configuration_status()
+    by_provider = {row["provider"]: row for row in rows}
+
+    assert len(rows) == 7
+    assert by_provider["World Bank"]["state"] == "public"
+    assert by_provider["UN Comtrade"]["state"] == "public"
+    assert by_provider["KEXIM"]["state"] == "missing"
+    assert by_provider["관세청"]["state"] == "missing"
+    assert by_provider["OpenDART"]["state"] == "missing"
+
+
+def test_canonical_entrypoint_uses_guided_decision_cockpit_order():
+    source = Path("streamlit_app.py").read_text(encoding="utf-8")
+
+    assert source.index("render_executive_hero()") < source.index("render_stage_selector()")
+    assert source.index("render_decision_cockpit") < source.index("render_scenario_story")
+    assert source.index("render_scenario_story") < source.index("render_financial_support")
+    assert source.index("render_financial_support") < source.index("render_data_decision_impact")
+    assert "render_mobile_stage_nav" in source
