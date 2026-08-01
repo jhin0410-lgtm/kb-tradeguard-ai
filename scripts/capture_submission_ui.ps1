@@ -63,6 +63,7 @@ function Capture-Page {
         [int]$BudgetMilliseconds = 14000
     )
     $target = Join-Path $output "$Name.png"
+    $profile = Join-Path $output "chrome-profile-$Name"
     $url = "http://127.0.0.1:$Port/$PathAndQuery"
     $arguments = @(
         "--headless=new",
@@ -71,14 +72,19 @@ function Capture-Page {
         "--disable-dev-shm-usage",
         "--hide-scrollbars",
         "--force-device-scale-factor=1",
+        "--user-data-dir=$profile",
         "--window-size=$Width,$Height",
         "--virtual-time-budget=$BudgetMilliseconds",
         "--screenshot=$target",
         $url
     )
-    & $chrome @arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Browser capture failed for $Name with exit code $LASTEXITCODE"
+    $browser = Start-Process -FilePath $chrome -ArgumentList $arguments -Wait -PassThru
+    if ($browser.ExitCode -ne 0) {
+        throw "Browser capture failed for $Name with exit code $($browser.ExitCode)"
+    }
+    $deadline = (Get-Date).AddSeconds(20)
+    while (-not (Test-Path $target) -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 500
     }
     if (-not (Test-Path $target)) {
         throw "Browser did not create screenshot: $target"
@@ -87,6 +93,7 @@ function Capture-Page {
     if ($size -lt 20000) {
         throw "Screenshot appears incomplete: $target ($size bytes)"
     }
+    Remove-Item -Recurse -Force $profile -ErrorAction SilentlyContinue
     Write-Host "$Name -> $target ($size bytes)"
 }
 
