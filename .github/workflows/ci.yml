@@ -14,7 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,5 +66,15 @@ jobs:
         with:
           name: kb-tradeguard-submission-package
           path: dist/KB-TradeGuard-AI-prototype.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Capture actual unified product UI
+        shell: pwsh
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\capture_submission_ui.ps1 -OutputDir outputs/ui-captures
+      - name: Upload actual UI captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: kb-tradeguard-ui-captures
+          path: outputs/ui-captures
           if-no-files-found: error
           retention-days: 14
