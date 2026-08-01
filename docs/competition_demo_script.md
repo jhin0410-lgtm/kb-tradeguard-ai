@@ -42,28 +42,24 @@ FX Stress, 자연헤지 후 순노출, 월별 예상 기말현금을 보여줍�
 
 > 21개 공개 상품 Registry를 거래 목적, 현금흐름, 결제조건과 위험 Finding에 대조합니다. Decision Brief가 선택한 Candidate마다 미확인 조건, 공식 출처와 다음 행동을 제시하며 승인·금리·한도를 확정하지 않습니다.
 
-## 2:25–2:45 · 통합 모드
+## 2:25–2:45 · 통합 제품 연결
 
-일반 화면 또는 준비된 캡처로 사이드바의 네 모드를 보여줍니다.
+일반 화면 또는 준비된 캡처로 공개 사이드바의 세 모드를 보여줍니다.
 
-> 같은 `streamlit_app.py` 안에서 Decision Desk, Analyst Workspace, Portfolio & Official Data, Evidence & Submission으로 이동합니다. 상세 검토와 포트폴리오가 별도 앱이 아니라 동일 Case와 Pipeline을 공유합니다.
+> 하나의 `streamlit_app.py` 안에서 Decision Desk, Portfolio & Official Data, Evidence & Submission으로 이동하며 같은 Case와 Pipeline을 공유합니다. 문서 업로드와 선택형 Live AI가 포함된 Analyst Workspace는 공개 사이트가 아니라 로컬·Private 환경에서만 별도로 활성화합니다.
 
 ## 2:45–3:00 · 검증과 결론
 
 > 22개 Rule, 30개 Gold Case, 150개 의미보존 Mutation, 4개 대표 시나리오와 전체 회귀 테스트로 내부 일관성을 검증합니다. TradeGuard AI는 금융판단을 AI에게 맡기는 것이 아니라 결정론적 Rule·Calculation·Evidence와 제한된 AI Assist를 연결해 더 준비된 무역금융 상담을 만듭니다.
 
-## 질의응답용 화면
+## 질의응답용 공개 화면
 
-### Analyst Workspace
+### Decision Desk 상세 탭
 
-- JSON Package 입력
 - 계약서·L/C Finding
 - 문서 정합성
-- 재무 감내도
-- Human Review Overlay
-- Action dependency
-- 감사 ZIP
-- 선택형 Grounded Live AI
+- 거래·재무 감내도
+- Action dependency와 필요서류
 
 ### Portfolio & Official Data
 
@@ -80,6 +76,25 @@ FX Stress, 자연헤지 후 순노출, 월별 예상 기말현금을 보여줍�
 - HTML Snapshot
 - 감사 JSON
 - 전체 감사 패키지
+
+## 질의응답용 Private 화면
+
+사전에 로컬에서 다음 환경변수로 활성화합니다.
+
+```powershell
+$env:TRADEGUARD_ENABLE_PRIVATE_WORKSPACE="1"
+python -m streamlit run streamlit_app.py
+```
+
+Analyst Workspace:
+
+- reviewed JSON Package 입력
+- Human Review Overlay
+- Candidate 상세
+- 감사 ZIP
+- 선택형 Grounded Live AI
+
+실제 개인정보·고객문서는 사용하지 않습니다.
 
 ## 발표 실패 대비
 
