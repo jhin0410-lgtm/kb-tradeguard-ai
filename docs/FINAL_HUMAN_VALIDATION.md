@@ -2,6 +2,8 @@
 
 The software-side competition hardening is merged into `main`. The remaining items require human participants or repository/deployment operations and must not be represented as completed before evidence exists.
 
+Execution status is tracked in GitHub issue `#32` (`Complete human usability study and final release gate`).
+
 ## 1. Five-person usability study
 
 - Recruit at least five anonymous participants according to `docs/USABILITY_TEST_PROTOCOL.md`.
