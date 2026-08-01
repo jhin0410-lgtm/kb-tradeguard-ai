@@ -34,9 +34,11 @@ from src.demo_scenarios import DemoScenarioMetadata
 
 PUBLIC_DEMO_URL = "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
 
-# Compatibility surface retained for existing public-entrypoint contracts. The guided
-# UI uses render_financial_support, which reads the same governed candidate records.
+# Compatibility surfaces retained for existing public-entrypoint contracts. The guided
+# UI uses render_financial_support, while the old deep links remain documented for
+# saved URLs and screenshots. Legacy pages/ modules are still excluded by navigation.
 _LEGACY_PRODUCT_RENDERER = render_product_consultation_section
+_LEGACY_PUBLIC_DEEP_LINKS = ("#ai", "#products", "#data")
 
 # The public URL is not a secret. Deployment configuration is applied in main so a
 # Streamlit secret can override this fallback on forks or renamed applications.
@@ -135,9 +137,8 @@ def _render_decision_stage(run, assessment, *, presentation_mode: bool):
 
 def _render_scenario_stage(assessment, *, presentation_mode: bool) -> None:
     render_scenario_story(assessment)
-    if not presentation_mode:
-        with st.expander("상세 포트폴리오 표와 기업 사례 전환", expanded=False):
-            render_portfolio_section(presentation_mode=False)
+    with st.expander("상세 포트폴리오 표와 기업 사례 전환", expanded=False):
+        render_portfolio_section(presentation_mode=presentation_mode)
 
 
 def _render_evidence_stage(run, scenario_id: str, *, presentation_mode: bool) -> None:
