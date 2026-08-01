@@ -71,7 +71,7 @@ def _render_internal_benchmark() -> None:
 
 
 def _render_audit(run, scenario_id: str) -> None:
-    st.markdown('<div id="evidence" class="tg-section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown('<div id="final-audit" class="tg-section-anchor"></div>', unsafe_allow_html=True)
     st.markdown('<div class="tg-section-title">04 · 근거·검증·감사</div>', unsafe_allow_html=True)
     app._render_validation_status()
     _render_internal_benchmark()
@@ -109,7 +109,7 @@ def _render_bottom_nav() -> None:
           <a href="#summary" target="_self">판정</a>
           <a href="#scenarios" target="_self">시나리오</a>
           <a href="#products" target="_self">금융지원</a>
-          <a href="#evidence" target="_self">근거</a>
+          <a href="#final-audit" target="_self">근거</a>
         </nav>
         <!-- Legacy anchor contract retained for direct AI-boundary links: #ai -->
         """,
