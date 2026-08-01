@@ -24,7 +24,8 @@ from src.competition_executive_ui import (
     render_stage_selector,
     resolve_active_portfolio,
 )
-from src.competition_portfolio_view import render_portfolio_section
+from src.competition_portfolio_view import render_portfolio_section, render_workflow_map
+from src.competition_product_view import render_product_consultation_section
 from src.competition_real_data_view import render_official_data_section
 from src.competition_topic6 import prepare_topic6_demo_package
 from src.competition_usability_study import render_usability_study
@@ -32,6 +33,10 @@ from src.demo_scenarios import DemoScenarioMetadata
 
 
 PUBLIC_DEMO_URL = "https://kb-tradeguard-ai-gcfcxw7cdmfcbxe4y4zsbl.streamlit.app/"
+
+# Compatibility surface retained for existing public-entrypoint contracts. The guided
+# UI uses render_financial_support, which reads the same governed candidate records.
+_LEGACY_PRODUCT_RENDERER = render_product_consultation_section
 
 # The public URL is not a secret. Deployment configuration is applied in main so a
 # Streamlit secret can override this fallback on forks or renamed applications.
@@ -154,6 +159,9 @@ def _render_competition_page() -> None:
     )
     st.markdown(f'<div class="{mode_class}">', unsafe_allow_html=True)
     render_executive_hero()
+    if not presentation_mode:
+        with st.expander("전체 6단계 처리 흐름", expanded=False):
+            render_workflow_map()
 
     scenario_id = app._query_scenario_id()
     if not presentation_mode:
