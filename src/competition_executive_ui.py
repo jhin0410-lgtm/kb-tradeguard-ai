@@ -210,11 +210,11 @@ def render_mobile_stage_nav(active_stage: str, scenario_id: str) -> None:
     )
 
 
-def render_decision_cockpit(run, assessment: PortfolioAssessment) -> ExecutiveModel:
+def render_decision_cockpit(run) -> ExecutiveModel:
     from .assessment_app_presentation import disposition_presentation
-    model = build_executive_model(run, assessment)
+
+    model = build_executive_model(run)
     presentation = disposition_presentation(model.disposition)
-    data_state = f"{model.reviewed_data_count}개 검토" if model.reviewed_data_count else "고정 Snapshot 확인"
     st.markdown('<div id="decision" class="tg-section-anchor"></div><div class="tg-section-title">01 · 거래 의사결정 Cockpit</div>', unsafe_allow_html=True)
     risk_count = len(model.summary.top_risks)
     action_count = len(model.summary.next_actions)
