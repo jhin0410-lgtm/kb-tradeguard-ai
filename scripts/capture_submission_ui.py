@@ -23,6 +23,7 @@ from pathlib import Path
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 
@@ -36,41 +37,11 @@ class CaptureTarget:
 
 
 TARGETS = (
-    CaptureTarget(
-        "01-decision-desk-desktop.png",
-        "?mode=decision&scenario=oa_high_risk",
-        1440,
-        2200,
-        "TRADE DECISION COCKPIT",
-    ),
-    CaptureTarget(
-        "02-portfolio-official-data.png",
-        "?mode=portfolio&scenario=oa_high_risk",
-        1440,
-        1800,
-        "CONNECTED CASE ANALYTICS",
-    ),
-    CaptureTarget(
-        "03-evidence-submission.png",
-        "?mode=evidence&scenario=oa_high_risk",
-        1440,
-        1800,
-        "SUBMISSION & AUDIT EVIDENCE",
-    ),
-    CaptureTarget(
-        "04-presentation-mode.png",
-        "?presentation=1&scenario=oa_high_risk",
-        1440,
-        2200,
-        "TRADE DECISION COCKPIT",
-    ),
-    CaptureTarget(
-        "05-decision-desk-mobile.png",
-        "?mode=decision&scenario=oa_high_risk",
-        430,
-        1900,
-        "TRADE DECISION COCKPIT",
-    ),
+    CaptureTarget("01-decision-desk-desktop.png", "?mode=decision&scenario=oa_high_risk", 1440, 2200, "TRADE DECISION COCKPIT"),
+    CaptureTarget("02-portfolio-official-data.png", "?mode=portfolio&scenario=oa_high_risk", 1440, 1800, "CONNECTED CASE ANALYTICS"),
+    CaptureTarget("03-evidence-submission.png", "?mode=evidence&scenario=oa_high_risk", 1440, 1800, "SUBMISSION & AUDIT EVIDENCE"),
+    CaptureTarget("04-presentation-mode.png", "?presentation=1&scenario=oa_high_risk", 1440, 2200, "TRADE DECISION COCKPIT"),
+    CaptureTarget("05-decision-desk-mobile.png", "?mode=decision&scenario=oa_high_risk", 430, 1900, "TRADE DECISION COCKPIT"),
 )
 
 
@@ -112,6 +83,26 @@ def browser_options(profile: Path, width: int, height: int) -> Options:
     return options
 
 
+def close_sidebar_for_mobile(driver: webdriver.Chrome) -> None:
+    selectors = (
+        '[data-testid="stSidebarCollapseButton"] button',
+        'button[data-testid="stSidebarCollapseButton"]',
+        '[data-testid="stSidebar"] button[aria-label*="sidebar" i]',
+        '[data-testid="stSidebar"] button',
+    )
+    for selector in selectors:
+        for button in driver.find_elements(By.CSS_SELECTOR, selector):
+            if button.is_displayed():
+                driver.execute_script("arguments[0].click();", button)
+                time.sleep(2)
+                return
+    driver.execute_script(
+        "const sidebar=document.querySelector('[data-testid=stSidebar]');"
+        "if(sidebar){sidebar.style.display='none';}"
+    )
+    time.sleep(1)
+
+
 def capture_page(base_url: str, output_dir: Path, target: CaptureTarget, timeout: int) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="tradeguard-chrome-") as profile_text:
         driver = webdriver.Chrome(options=browser_options(Path(profile_text), target.width, target.height))
@@ -120,9 +111,11 @@ def capture_page(base_url: str, output_dir: Path, target: CaptureTarget, timeout
             driver.get(base_url + target.query)
             wait = WebDriverWait(driver, timeout, poll_frequency=0.5)
             wait.until(lambda browser: browser.execute_script("return document.readyState") == "complete")
-            wait.until(lambda browser: target.marker in browser.find_element("tag name", "body").text)
-            wait.until(lambda browser: "Running" not in browser.find_element("tag name", "body").text[:100])
+            wait.until(lambda browser: target.marker in browser.find_element(By.TAG_NAME, "body").text)
+            wait.until(lambda browser: "Running" not in browser.find_element(By.TAG_NAME, "body").text[:100])
             time.sleep(4)
+            if target.width <= 500:
+                close_sidebar_for_mobile(driver)
             driver.execute_script("window.scrollTo(0, 0)")
             driver.set_window_size(target.width, target.height)
             path = output_dir / target.filename
@@ -131,7 +124,7 @@ def capture_page(base_url: str, output_dir: Path, target: CaptureTarget, timeout
         except TimeoutException as exc:
             body = ""
             try:
-                body = driver.find_element("tag name", "body").text[:2000]
+                body = driver.find_element(By.TAG_NAME, "body").text[:2000]
             except Exception:
                 pass
             raise RuntimeError(
@@ -193,10 +186,7 @@ def main() -> int:
     try:
         wait_for_health(port, process, args.startup_timeout)
         base_url = f"http://127.0.0.1:{port}/"
-        captures = [
-            capture_page(base_url, output_dir, target, args.render_timeout)
-            for target in TARGETS
-        ]
+        captures = [capture_page(base_url, output_dir, target, args.render_timeout) for target in TARGETS]
     finally:
         if process.poll() is None:
             process.terminate()
