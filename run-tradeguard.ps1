@@ -32,6 +32,12 @@ if (-not $SkipInstall) {
     & $venvPython -m pip install -r requirements.txt
 }
 
+if ($Mode -eq "analyst") {
+    $env:TRADEGUARD_ENABLE_PRIVATE_WORKSPACE = "true"
+}
+
+$url = "http://localhost:$Port/?mode=$Mode"
 Write-Host "[3/3] KB TradeGuard AI를 실행합니다." -ForegroundColor Green
-Write-Host "브라우저 주소: http://localhost:$Port/?mode=$Mode"
+Write-Host "브라우저 주소: $url"
+Start-Process $url
 & $venvPython -m streamlit run streamlit_app.py --server.port $Port --server.headless true
