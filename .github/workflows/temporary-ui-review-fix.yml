@@ -3,7 +3,7 @@ name: temporary-ui-review-fix
 on:
   pull_request:
     branches:
-      - automation/ui-review-fix-base-v3
+      - automation/ui-review-fix-base-v4
 
 permissions:
   contents: write
@@ -25,20 +25,29 @@ jobs:
       - run: python -m pip install -r requirements.txt
       - name: Apply reviewed UI fixes
         run: python .internal/apply_ui_review_fixes.py
-      - name: Align guided order regression with reviewed call shape
+      - name: Align reviewed wording and call-shape regressions
         shell: pwsh
         run: |
           @'
           from pathlib import Path
-          path = Path("tests/test_competition_executive_ui.py")
-          source = path.read_text(encoding="utf-8")
-          old = '    decision = source.index("model = _render_decision_stage(\\n            run,")\n'
-          new = '    decision = source.index("model = _render_decision_stage(run, presentation_mode=True)")\n'
-          if source.count(old) != 1:
+
+          test_path = Path("tests/test_competition_executive_ui.py")
+          test_source = test_path.read_text(encoding="utf-8")
+          old_call = '    decision = source.index("model = _render_decision_stage(\\n            run,")\n'
+          new_call = '    decision = source.index("model = _render_decision_stage(run, presentation_mode=True)")\n'
+          if test_source.count(old_call) != 1:
               raise RuntimeError("Expected one legacy guided-order assertion")
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
-          '@ | Set-Content -Encoding UTF8 .internal/align_order_test.py
-          python .internal/align_order_test.py
+          test_path.write_text(test_source.replace(old_call, new_call, 1), encoding="utf-8")
+
+          app_path = Path("streamlit_app.py")
+          app_source = app_path.read_text(encoding="utf-8")
+          old_scope = "다중 거래 포트폴리오의 외환노출·유동성 수치는"
+          new_scope = "별도 다중 거래 포트폴리오의 외환노출·유동성 수치는"
+          if app_source.count(old_scope) != 1:
+              raise RuntimeError("Expected one portfolio scope sentence")
+          app_path.write_text(app_source.replace(old_scope, new_scope, 1), encoding="utf-8")
+          '@ | Set-Content -Encoding UTF8 .internal/align_review_regressions.py
+          python .internal/align_review_regressions.py
       - name: Run focused review regression tests
         run: python -m pytest -q tests/test_competition_executive_ui.py tests/test_competition_usability_study.py tests/test_competition_app.py
       - name: Run full regression suite
