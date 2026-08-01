@@ -1,0 +1,113 @@
+name: temporary-decision-cockpit-ui-audit
+
+on:
+  push:
+    branches:
+      - feature/decision-cockpit-ui-v2
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -r requirements.txt playwright
+      - run: python -m playwright install chromium
+      - name: Start local Streamlit app
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ui-audit | Out-Null
+          $process = Start-Process python -ArgumentList '-m','streamlit','run','streamlit_app.py','--server.headless','true','--server.port','8501','--browser.gatherUsageStats','false' -PassThru -RedirectStandardOutput ui-audit/streamlit-out.log -RedirectStandardError ui-audit/streamlit-err.log
+          $process.Id | Out-File -Encoding ascii ui-audit/streamlit.pid
+          $deadline = (Get-Date).AddMinutes(2)
+          do {
+            try {
+              $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8501/_stcore/health' -UseBasicParsing -TimeoutSec 5
+              if ($response.StatusCode -eq 200) { break }
+            } catch {}
+            Start-Sleep -Seconds 2
+          } while ((Get-Date) -lt $deadline)
+          if (-not $response -or $response.StatusCode -ne 200) {
+            Get-Content ui-audit/streamlit-out.log -ErrorAction SilentlyContinue
+            Get-Content ui-audit/streamlit-err.log -ErrorAction SilentlyContinue
+            throw 'Streamlit did not become healthy'
+          }
+      - name: Audit desktop and mobile decision journeys
+        shell: pwsh
+        run: |
+          @'
+          import json
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+
+          BASE = "http://127.0.0.1:8501/"
+          OUTPUT = Path("ui-audit")
+          OUTPUT.mkdir(exist_ok=True)
+          CASES = [
+              ("decision-desktop", "?stage=decision", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "지금 할 일"], 0, False),
+              ("scenarios-desktop", "?stage=scenarios", {"width": 1440, "height": 1000}, ["손익·유동성·자연헤지 시나리오"], 3, False),
+              ("support-desktop", "?stage=support", {"width": 1440, "height": 1000}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1", "상담 준비 패키지"], 0, False),
+              ("evidence-desktop", "?stage=evidence", {"width": 1440, "height": 1000}, ["공식데이터가 판단에 미치는 영향", "공식 API 연결 상태"], 0, False),
+              ("presentation-desktop", "?presentation=true", {"width": 1440, "height": 1000}, ["거래 의사결정 Cockpit", "손익·유동성·자연헤지 시나리오", "우선 금융지원과 KB 상담 Handoff", "공식데이터가 판단에 미치는 영향"], 3, False),
+              ("decision-mobile", "?stage=decision", {"width": 390, "height": 844}, ["거래 의사결정 Cockpit", "지금 할 일"], 0, True),
+              ("scenarios-mobile", "?stage=scenarios", {"width": 390, "height": 844}, ["손익·유동성·자연헤지 시나리오"], 3, True),
+              ("support-mobile", "?stage=support", {"width": 390, "height": 844}, ["우선 금융지원과 KB 상담 Handoff", "우선 상담 1"], 0, True),
+              ("study-mobile", "?stage=decision&study=true", {"width": 390, "height": 844}, ["사용성 검증 모드", "과제 시작"], 0, True),
+          ]
+
+          results = []
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              for name, suffix, viewport, required, min_charts, mobile in CASES:
+                  page = browser.new_page(viewport=viewport)
+                  page.goto(BASE + suffix, wait_until="domcontentloaded", timeout=120_000)
+                  page.get_by_text("KB TRADEGUARD AI", exact=False).first.wait_for(timeout=120_000)
+                  page.wait_for_timeout(3500)
+                  body = page.locator("body").inner_text()
+                  missing = [text for text in required if text not in body]
+                  chart_count = page.locator(".js-plotly-plot").count()
+                  overflow = page.evaluate(
+                      "() => ({scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth, overflow: document.documentElement.scrollWidth > window.innerWidth + 4})"
+                  )
+                  nav_count = page.locator(".tg-mobile-stage-nav").count()
+                  if missing:
+                      raise AssertionError(f"{name}: missing text {missing}")
+                  if chart_count < min_charts:
+                      raise AssertionError(f"{name}: expected at least {min_charts} charts, got {chart_count}")
+                  if overflow["overflow"]:
+                      raise AssertionError(f"{name}: horizontal overflow {overflow}")
+                  if mobile and nav_count != 1:
+                      raise AssertionError(f"{name}: expected one mobile nav, got {nav_count}")
+                  page.screenshot(path=str(OUTPUT / f"{name}.png"), full_page=True)
+                  results.append({
+                      "name": name,
+                      "url": BASE + suffix,
+                      "viewport": viewport,
+                      "required_text": required,
+                      "chart_count": chart_count,
+                      "mobile_nav_count": nav_count,
+                      "geometry": overflow,
+                      "status": "passed",
+                  })
+                  page.close()
+              browser.close()
+          (OUTPUT / "ui-audit.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+          '@ | Set-Content -Encoding UTF8 ui-audit/run_ui_audit.py
+          python ui-audit/run_ui_audit.py
+      - name: Upload UI audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-cockpit-ui-audit
+          path: ui-audit/
+          if-no-files-found: warn
+          retention-days: 14
